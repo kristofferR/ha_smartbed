@@ -32,7 +32,7 @@ async def async_get_config_entry_diagnostics(
 
     # Get connection state
     is_connected = coordinator.is_connected
-    client = coordinator._client
+    client = coordinator.client
 
     # Get BLE device info if connected
     ble_info: dict[str, Any] = {"connected": is_connected}
@@ -49,9 +49,9 @@ async def async_get_config_entry_diagnostics(
             ]
 
     # Get controller info
-    controller_info: dict[str, Any] = {"initialized": coordinator._controller is not None}
-    if coordinator._controller:
-        controller = coordinator._controller
+    controller_info: dict[str, Any] = {"initialized": coordinator.controller is not None}
+    if coordinator.controller:
+        controller = coordinator.controller
         controller_info.update({
             "class": type(controller).__name__,
             "characteristic_uuid": controller.control_characteristic_uuid,
@@ -66,7 +66,7 @@ async def async_get_config_entry_diagnostics(
             controller_info["char_uuid"] = controller._char_uuid
 
     # Get position data
-    position_data = dict(coordinator._position_data)
+    position_data = dict(coordinator.position_data)
 
     return {
         "entry": {
@@ -85,9 +85,7 @@ async def async_get_config_entry_diagnostics(
         },
         "coordinator": {
             "is_connected": is_connected,
-            "is_connecting": coordinator._connecting,
-            "intentional_disconnect": coordinator._intentional_disconnect,
-            "position_callbacks_count": len(coordinator._position_callbacks),
+            "is_connecting": coordinator.is_connecting,
         },
         "ble": ble_info,
         "controller": controller_info,

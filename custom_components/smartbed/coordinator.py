@@ -216,6 +216,21 @@ class SmartBedCoordinator:
         return self._position_data
 
     @property
+    def is_connected(self) -> bool:
+        """Return whether we are currently connected to the bed."""
+        return self._client is not None and self._client.is_connected
+
+    @property
+    def is_connecting(self) -> bool:
+        """Return whether we are currently connecting to the bed."""
+        return self._connecting
+
+    @property
+    def client(self) -> BleakClient | None:
+        """Return the BLE client (for diagnostics)."""
+        return self._client
+
+    @property
     def device_info(self) -> DeviceInfo:
         """Return device info for this bed."""
         return DeviceInfo(

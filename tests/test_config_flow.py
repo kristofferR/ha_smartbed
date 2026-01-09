@@ -112,6 +112,39 @@ class TestDetectBedType:
         bed_type = detect_bed_type(mock_bluetooth_service_info_unknown)
         assert bed_type is None
 
+    def test_detect_motosleep_lowercase_name(self):
+        """Test MotoSleep detection with lowercase HHC prefix."""
+        service_info = MagicMock()
+        service_info.name = "hhc1234567890"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_MOTOSLEEP
+
+    def test_detect_with_empty_name(self):
+        """Test detection handles empty device name."""
+        service_info = MagicMock()
+        service_info.name = None
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type is None
+
+    def test_detect_with_empty_service_uuids(self):
+        """Test detection handles empty service UUIDs."""
+        service_info = MagicMock()
+        service_info.name = "Some Device"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type is None
+
 
 class TestBluetoothDiscoveryFlow:
     """Test Bluetooth discovery flow."""
