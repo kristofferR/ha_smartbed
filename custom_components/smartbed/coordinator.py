@@ -553,7 +553,7 @@ class SmartBedCoordinator:
 
                 # Create the controller
                 _LOGGER.debug("Creating %s controller...", self._bed_type)
-                self._controller = self._create_controller()
+                self._controller = await self._async_create_controller()
                 _LOGGER.debug("Controller created successfully")
 
                 if reset_timer:
@@ -678,7 +678,7 @@ class SmartBedCoordinator:
             lambda: asyncio.create_task(self._async_auto_reconnect()),
         )
 
-    def _create_controller(self) -> BedController:
+    async def _async_create_controller(self) -> BedController:
         """Create the appropriate bed controller."""
         if self._bed_type == BED_TYPE_LINAK:
             from .beds.linak import LinakController
@@ -689,9 +689,8 @@ class SmartBedCoordinator:
             from .beds.richmat import RichmatController, detect_richmat_variant
 
             # Detect variant based on available services
-            # For now, default to Nordic variant
-            # TODO: async detection during connection
-            return RichmatController(self, is_wilinke=False)
+            is_wilinke, char_uuid = await detect_richmat_variant(self._client)
+            return RichmatController(self, is_wilinke=is_wilinke, char_uuid=char_uuid)
 
         if self._bed_type == BED_TYPE_KEESON:
             from .beds.keeson import KeesonController

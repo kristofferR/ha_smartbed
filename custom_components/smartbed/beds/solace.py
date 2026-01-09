@@ -211,6 +211,7 @@ class SolaceController(BedController):
             2: SolaceCommands.PRESET_MEMORY_2,
             3: SolaceCommands.PRESET_MEMORY_3,
             4: SolaceCommands.PRESET_MEMORY_4,
+            5: SolaceCommands.PRESET_MEMORY_5,
         }
         if command := commands.get(memory_num):
             await self.write_command(command, repeat_count=100, repeat_delay_ms=300)
@@ -222,6 +223,7 @@ class SolaceController(BedController):
             2: SolaceCommands.PROGRAM_MEMORY_2,
             3: SolaceCommands.PROGRAM_MEMORY_3,
             4: SolaceCommands.PROGRAM_MEMORY_4,
+            5: SolaceCommands.PROGRAM_MEMORY_5,
         }
         if command := commands.get(memory_num):
             await self.write_command(command)
