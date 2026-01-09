@@ -222,7 +222,7 @@ Some beds require Bluetooth pairing before they can be controlled.
 ### Before Asking for Help
 
 1. **Check logs:** Look at Home Assistant logs for error messages
-   - Settings → System → Logs → Filter by "smartbed"
+   - Settings → System → Logs → Filter by "ha_smartbed"
 
 2. **Download diagnostics:**
    - Settings → Integrations → Smart Bed → ⋮ → Download diagnostics
@@ -242,7 +242,7 @@ Some beds require Bluetooth pairing before they can be controlled.
 
 ### Where to Get Help
 
-- **GitHub Issues:** [ha-smartbed/issues](https://github.com/kristofferR/ha-smartbed/issues)
+- **GitHub Issues:** [ha_smartbed/issues](https://github.com/kristofferR/ha_smartbed/issues)
 - **Home Assistant Community:** Search for "smart bed" discussions
 
 ---

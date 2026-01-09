@@ -62,7 +62,7 @@ A Home Assistant custom integration for controlling smart adjustable beds via Bl
 
 ### Manual Installation
 
-1. Copy the `custom_components/smartbed` folder to your Home Assistant `config/custom_components/` directory
+1. Copy the `custom_components/ha_smartbed` folder to your Home Assistant `config/custom_components/` directory
 2. Restart Home Assistant
 
 ## Configuration
@@ -144,7 +144,7 @@ For detailed troubleshooting steps, see the [Connection Guide](docs/CONNECTION_G
 1. **Check Bluetooth range**: Ensure your Bluetooth adapter or ESPHome proxy is within range
 2. **Disconnect manufacturer app**: Most beds only allow one BLE connection
 3. **Restart the integration**: Go to Settings → Devices & Services → Smart Bed → Reload
-4. **Check logs**: Enable debug logging for `custom_components.smartbed`
+4. **Check logs**: Enable debug logging for `custom_components.ha_smartbed`
 
 ### Debug Logging
 
@@ -154,7 +154,7 @@ Add to `configuration.yaml`:
 logger:
   default: info
   logs:
-    custom_components.smartbed: debug
+    custom_components.ha_smartbed: debug
     homeassistant.components.bluetooth: debug
 ```
 

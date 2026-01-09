@@ -282,7 +282,7 @@ Add to `configuration.yaml`:
 logger:
   default: info
   logs:
-    custom_components.smartbed: debug
+    custom_components.ha_smartbed: debug
     homeassistant.components.bluetooth: debug
     bleak: debug
 ```

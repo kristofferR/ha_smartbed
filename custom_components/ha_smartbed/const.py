@@ -145,6 +145,17 @@ RICHMAT_VARIANTS: Final = {
     RICHMAT_VARIANT_WILINKE: "WiLinke (5-byte commands with checksum)",
 }
 
+# All protocol variants (for validation)
+ALL_PROTOCOL_VARIANTS: Final = [
+    VARIANT_AUTO,
+    KEESON_VARIANT_BASE,
+    KEESON_VARIANT_KSBT,
+    LEGGETT_VARIANT_GEN2,
+    LEGGETT_VARIANT_OKIN,
+    RICHMAT_VARIANT_NORDIC,
+    RICHMAT_VARIANT_WILINKE,
+]
+
 # Default values
 DEFAULT_MOTOR_COUNT: Final = 2
 DEFAULT_HAS_MASSAGE: Final = False

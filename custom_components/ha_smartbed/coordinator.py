@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import traceback
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Any, Callable, Coroutine
 
 from bleak import BleakClient
 from bleak.exc import BleakError
@@ -946,7 +946,7 @@ class SmartBedCoordinator:
 
     async def async_execute_controller_command(
         self,
-        command_fn,
+        command_fn: Callable[["BedController"], Coroutine[Any, Any, None]],
         cancel_running: bool = True,
     ) -> None:
         """Execute a controller command with proper serialization.

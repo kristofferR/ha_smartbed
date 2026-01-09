@@ -23,6 +23,7 @@ from homeassistant.const import CONF_ADDRESS, CONF_NAME
 
 from .const import (
     ADAPTER_AUTO,
+    ALL_PROTOCOL_VARIANTS,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
@@ -515,7 +516,9 @@ class SmartBedConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required(CONF_ADDRESS): str,
                     vol.Required(CONF_BED_TYPE): vol.In(SUPPORTED_BED_TYPES),
-                    vol.Optional(CONF_PROTOCOL_VARIANT, default=VARIANT_AUTO): str,
+                    vol.Optional(CONF_PROTOCOL_VARIANT, default=VARIANT_AUTO): vol.In(
+                        ALL_PROTOCOL_VARIANTS
+                    ),
                     vol.Optional(CONF_NAME, default="Smart Bed"): str,
                     vol.Optional(CONF_MOTOR_COUNT, default=DEFAULT_MOTOR_COUNT): vol.In(
                         [2, 3, 4]

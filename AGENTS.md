@@ -22,7 +22,7 @@ See `smartbed-mqtt-discord-chats/esphome-bug-llm-generated.md` for detailed docu
 ## Architecture
 
 ```
-custom_components/smartbed/
+custom_components/ha_smartbed/
 ├── __init__.py          # Integration setup, platform loading
 ├── config_flow.py       # Device discovery and setup wizard
 ├── coordinator.py       # BLE connection management (central hub)
@@ -255,7 +255,7 @@ These details were discovered by comparing with the working smartbed-mqtt implem
 
 - **Options Flow** - Reconfigure bed settings without deleting the integration
 - **Diagnostics** - Download debug info from Settings > Devices > Smart Bed
-- **Custom Services** - `smartbed.goto_preset`, `smartbed.save_preset`, `smartbed.stop_all`
+- **Custom Services** - `ha_smartbed.goto_preset`, `ha_smartbed.save_preset`, `ha_smartbed.stop_all`
 - **Auto-reconnection** - Automatically reconnects after unexpected disconnections
 - **MAC Validation** - Validates Bluetooth address format during manual setup
 
@@ -263,14 +263,14 @@ These details were discovered by comparing with the working smartbed-mqtt implem
 
 ### Testing in Home Assistant
 
-1. Copy `custom_components/smartbed` to your HA's `config/custom_components/`
+1. Copy `custom_components/ha_smartbed` to your HA's `config/custom_components/`
 2. Restart Home Assistant
 3. Add debug logging to `configuration.yaml`:
    ```yaml
    logger:
      default: info
      logs:
-       custom_components.smartbed: debug
+       custom_components.ha_smartbed: debug
        homeassistant.components.bluetooth: debug
    ```
 

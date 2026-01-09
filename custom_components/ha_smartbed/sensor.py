@@ -13,7 +13,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-UNIT_DEGREES = "°"
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -23,6 +22,9 @@ from .coordinator import SmartBedCoordinator
 from .entity import SmartBedEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+# Unit constant for angle measurements
+UNIT_DEGREES = "°"
 
 
 @dataclass(frozen=True, kw_only=True)
