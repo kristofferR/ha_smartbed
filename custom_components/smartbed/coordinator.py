@@ -48,6 +48,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5.0  # Increased delay between retries for BLE stability
 CONNECTION_TIMEOUT = 30.0  # Timeout for BLE connection attempts
 DISCONNECT_TIMEOUT = 60.0
+DISCONNECT_TIMEOUT_NO_SENSING = 5.0  # Faster disconnect when angle sensing disabled
 POST_CONNECT_DELAY = 1.0  # Delay after connection to let it stabilize
 
 # BLE connection parameters - use conservative/compatible values
@@ -78,7 +79,9 @@ class SmartBedCoordinator:
         self._controller: BedController | None = None
         self._disconnect_timer: asyncio.TimerHandle | None = None
         self._lock = asyncio.Lock()
+        self._command_lock = asyncio.Lock()  # Separate lock for command serialization
         self._connecting: bool = False  # Track if we're actively connecting
+        self._cancel_command = asyncio.Event()  # Signal to cancel current command
 
         # Position data from notifications
         self._position_data: dict[str, float] = {}
@@ -498,9 +501,10 @@ class SmartBedCoordinator:
 
                 # Log discovered services in detail
                 if self._client.services:
+                    services_list = list(self._client.services)
                     _LOGGER.debug(
                         "Discovered %d BLE services on %s:",
-                        len(self._client.services),
+                        len(services_list),
                         self._address,
                     )
                     for service in self._client.services:
@@ -694,13 +698,15 @@ class SmartBedCoordinator:
     def _reset_disconnect_timer(self) -> None:
         """Reset the disconnect timer."""
         self._cancel_disconnect_timer()
+        # Use shorter timeout when angle sensing disabled to free up BLE for physical remote
+        timeout = DISCONNECT_TIMEOUT_NO_SENSING if self._disable_angle_sensing else DISCONNECT_TIMEOUT
         _LOGGER.debug(
             "Setting idle disconnect timer for %s (%.0f seconds)",
             self._address,
-            DISCONNECT_TIMEOUT,
+            timeout,
         )
         self._disconnect_timer = self.hass.loop.call_later(
-            DISCONNECT_TIMEOUT,
+            timeout,
             lambda: asyncio.create_task(self._async_idle_disconnect()),
         )
 
@@ -713,9 +719,10 @@ class SmartBedCoordinator:
 
     async def _async_idle_disconnect(self) -> None:
         """Disconnect after idle timeout."""
+        timeout = DISCONNECT_TIMEOUT_NO_SENSING if self._disable_angle_sensing else DISCONNECT_TIMEOUT
         _LOGGER.info(
             "Idle timeout reached (%.0f seconds), disconnecting from %s",
-            DISCONNECT_TIMEOUT,
+            timeout,
             self._address,
         )
         await self.async_disconnect()
@@ -736,23 +743,64 @@ class SmartBedCoordinator:
         repeat_count: int = 1,
         repeat_delay_ms: int = 100,
     ) -> None:
-        """Write a command to the bed."""
-        _LOGGER.debug(
-            "async_write_command: %s (repeat: %d, delay: %dms)",
-            command.hex(),
-            repeat_count,
-            repeat_delay_ms,
-        )
+        """Write a command to the bed.
+
+        New commands cancel any running command for immediate response.
+        """
+        # Cancel any running command immediately
+        self._cancel_command.set()
+
+        async with self._command_lock:
+            # Clear cancel signal for this command
+            self._cancel_command.clear()
+
+            _LOGGER.debug(
+                "async_write_command: %s (repeat: %d, delay: %dms)",
+                command.hex(),
+                repeat_count,
+                repeat_delay_ms,
+            )
+            if not await self.async_ensure_connected():
+                _LOGGER.error("Cannot write command: not connected to bed")
+                raise ConnectionError("Not connected to bed")
+
+            if self._controller is None:
+                _LOGGER.error("Cannot write command: no controller available")
+                raise RuntimeError("No controller available")
+
+            await self._controller.write_command(
+                command, repeat_count, repeat_delay_ms, self._cancel_command
+            )
+
+            # Read position after movement if angle sensing is enabled
+            if not self._disable_angle_sensing and not self._cancel_command.is_set():
+                await self._async_read_positions()
+
+            self._reset_disconnect_timer()
+
+    async def async_stop_command(self) -> None:
+        """Immediately stop any running command and send stop to bed.
+
+        This bypasses the command lock to ensure immediate response.
+        """
+        _LOGGER.info("Stop requested - cancelling current command")
+
+        # Signal cancellation to any running command
+        self._cancel_command.set()
+
+        # Ensure connected and send stop immediately
         if not await self.async_ensure_connected():
-            _LOGGER.error("Cannot write command: not connected to bed")
-            raise ConnectionError("Not connected to bed")
+            _LOGGER.error("Cannot send stop: not connected to bed")
+            return
 
         if self._controller is None:
-            _LOGGER.error("Cannot write command: no controller available")
-            raise RuntimeError("No controller available")
+            _LOGGER.error("Cannot send stop: no controller available")
+            return
 
-        await self._controller.write_command(command, repeat_count, repeat_delay_ms)
+        # Send stop command directly (single write, no repeat)
+        await self._controller.write_command(bytes([0x00, 0x00]))
         self._reset_disconnect_timer()
+        _LOGGER.info("Stop command sent")
 
     async def async_start_notify(self) -> None:
         """Start listening for position notifications."""
@@ -769,6 +817,19 @@ class SmartBedCoordinator:
 
         _LOGGER.info("Starting position notifications for %s", self._address)
         await self._controller.start_notify(self._handle_position_update)
+
+    async def _async_read_positions(self) -> None:
+        """Actively read current positions from the bed.
+
+        Called after movement commands to ensure position data is up to date.
+        """
+        if self._controller is None:
+            return
+
+        try:
+            await self._controller.read_positions(self._motor_count)
+        except Exception as err:
+            _LOGGER.debug("Failed to read positions: %s", err)
 
     @callback
     def _handle_position_update(self, position: str, angle: float) -> None:

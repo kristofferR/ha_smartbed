@@ -25,10 +25,10 @@ class SmartBedEntity(Entity):
 
     @property
     def available(self) -> bool:
-        """Return True if entity is available."""
-        return (
-            self._coordinator.controller is not None
-            and self._coordinator._client is not None
-            and self._coordinator._client.is_connected
-        )
+        """Return True if entity is available.
+
+        Entities are always available as long as the integration is loaded.
+        We connect on-demand when commands are sent.
+        """
+        return True
 

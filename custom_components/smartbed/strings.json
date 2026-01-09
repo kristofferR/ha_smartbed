@@ -136,6 +136,12 @@
       },
       "stop": {
         "name": "Stop All"
+      },
+      "disconnect": {
+        "name": "Disconnect"
+      },
+      "connect": {
+        "name": "Connect"
       }
     },
     "cover": {

@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfAngle
+UNIT_DEGREES = "°"
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -37,7 +37,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartBedSensorEntityDescription, ...] = (
         key="back_angle",
         translation_key="back_angle",
         icon="mdi:angle-acute",
-        native_unit_of_measurement=UnitOfAngle.DEGREES,
+        native_unit_of_measurement=UNIT_DEGREES,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         position_key="back",
@@ -47,7 +47,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartBedSensorEntityDescription, ...] = (
         key="legs_angle",
         translation_key="legs_angle",
         icon="mdi:angle-acute",
-        native_unit_of_measurement=UnitOfAngle.DEGREES,
+        native_unit_of_measurement=UNIT_DEGREES,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         position_key="legs",
@@ -57,7 +57,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartBedSensorEntityDescription, ...] = (
         key="head_angle",
         translation_key="head_angle",
         icon="mdi:angle-acute",
-        native_unit_of_measurement=UnitOfAngle.DEGREES,
+        native_unit_of_measurement=UNIT_DEGREES,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         position_key="head",
@@ -67,7 +67,7 @@ SENSOR_DESCRIPTIONS: tuple[SmartBedSensorEntityDescription, ...] = (
         key="feet_angle",
         translation_key="feet_angle",
         icon="mdi:angle-acute",
-        native_unit_of_measurement=UnitOfAngle.DEGREES,
+        native_unit_of_measurement=UNIT_DEGREES,
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         position_key="feet",

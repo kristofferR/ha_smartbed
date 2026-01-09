@@ -26,9 +26,10 @@ _LOGGER = logging.getLogger(__name__)
 class SmartBedButtonEntityDescription(ButtonEntityDescription):
     """Describes a Smart Bed button entity."""
 
-    press_fn: Callable[[BedController], Coroutine[Any, Any, None]]
+    press_fn: Callable[[BedController], Coroutine[Any, Any, None]] | None = None
     requires_massage: bool = False
     entity_category: EntityCategory | None = None
+    is_coordinator_action: bool = False  # If True, this is a coordinator-level action (connect/disconnect)
 
 
 BUTTON_DESCRIPTIONS: tuple[SmartBedButtonEntityDescription, ...] = (
@@ -92,6 +93,21 @@ BUTTON_DESCRIPTIONS: tuple[SmartBedButtonEntityDescription, ...] = (
         translation_key="stop",
         icon="mdi:stop",
         press_fn=lambda ctrl: ctrl.stop_all(),
+    ),
+    # Connection control buttons
+    SmartBedButtonEntityDescription(
+        key="disconnect",
+        translation_key="disconnect",
+        icon="mdi:bluetooth-off",
+        entity_category=EntityCategory.CONFIG,
+        is_coordinator_action=True,
+    ),
+    SmartBedButtonEntityDescription(
+        key="connect",
+        translation_key="connect",
+        icon="mdi:bluetooth-connect",
+        entity_category=EntityCategory.CONFIG,
+        is_coordinator_action=True,
     ),
     # Massage buttons (only if has_massage)
     SmartBedButtonEntityDescription(
@@ -206,6 +222,7 @@ class SmartBedButton(SmartBedEntity, ButtonEntity):
         super().__init__(coordinator)
         self.entity_description = description
         self._attr_unique_id = f"{coordinator.address}_{description.key}"
+        self._attr_translation_key = description.translation_key
 
     async def async_press(self) -> None:
         """Handle button press."""
@@ -214,6 +231,31 @@ class SmartBedButton(SmartBedEntity, ButtonEntity):
             self.entity_description.key,
             self._coordinator.name,
         )
+
+        # Handle coordinator-level actions (connect/disconnect/stop)
+        if self.entity_description.is_coordinator_action:
+            try:
+                if self.entity_description.key == "disconnect":
+                    await self._coordinator.async_disconnect()
+                    _LOGGER.info("Disconnected from bed - physical remote should now work")
+                elif self.entity_description.key == "connect":
+                    await self._coordinator.async_ensure_connected()
+                    _LOGGER.info("Connected to bed")
+            except Exception as err:
+                _LOGGER.error(
+                    "Failed to execute coordinator action %s: %s",
+                    self.entity_description.key,
+                    err,
+                )
+            return
+
+        # Stop button gets special handling - cancels current command immediately
+        if self.entity_description.key == "stop":
+            try:
+                await self._coordinator.async_stop_command()
+            except Exception as err:
+                _LOGGER.error("Failed to execute stop command: %s", err)
+            return
 
         if not await self._coordinator.async_ensure_connected():
             _LOGGER.error(

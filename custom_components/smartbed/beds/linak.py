@@ -109,8 +109,16 @@ class LinakController(BedController):
         command: bytes,
         repeat_count: int = 1,
         repeat_delay_ms: int = 100,
+        cancel_event: asyncio.Event | None = None,
     ) -> None:
-        """Write a command to the bed."""
+        """Write a command to the bed.
+
+        Args:
+            command: The command bytes to send
+            repeat_count: Number of times to repeat the command
+            repeat_delay_ms: Delay between repeats in milliseconds
+            cancel_event: Optional event that signals cancellation (e.g., stop pressed)
+        """
         if self.client is None or not self.client.is_connected:
             _LOGGER.error(
                 "Cannot write command: BLE client not connected (client=%s, is_connected=%s)",
@@ -126,28 +134,19 @@ class LinakController(BedController):
             repeat_delay_ms,
             LINAK_CONTROL_CHAR_UUID,
         )
-        _LOGGER.debug(
-            "Client state: is_connected=%s, mtu_size=%s, address=%s",
-            self.client.is_connected,
-            getattr(self.client, 'mtu_size', 'N/A'),
-            getattr(self.client, 'address', 'N/A'),
-        )
 
         for i in range(repeat_count):
+            # Check for cancellation before each write
+            if cancel_event is not None and cancel_event.is_set():
+                _LOGGER.info("Command cancelled after %d/%d writes", i, repeat_count)
+                return
+
             try:
-                _LOGGER.debug(
-                    "Sending GATT write %d/%d: char=%s, data=%s, response=False",
-                    i + 1,
-                    repeat_count,
-                    LINAK_CONTROL_CHAR_UUID,
-                    command.hex(),
-                )
-                # Use response=True to match the original TypeScript implementation
-                # The bed expects write-with-response for reliable command delivery
+                # Use response=False for faster writes (write-without-response)
+                # This allows smoother continuous movement
                 await self.client.write_gatt_char(
-                    LINAK_CONTROL_CHAR_UUID, command, response=True
+                    LINAK_CONTROL_CHAR_UUID, command, response=False
                 )
-                _LOGGER.debug("GATT write %d/%d successful", i + 1, repeat_count)
             except BleakError as err:
                 _LOGGER.error(
                     "Failed to write command %s to characteristic %s: %s (type: %s)",
@@ -320,17 +319,51 @@ class LinakController(BedController):
             except BleakError:
                 pass
 
+    async def read_positions(self, motor_count: int = 2) -> None:
+        """Actively read position data from all motor position characteristics.
+
+        This provides a way to get current positions without relying solely
+        on notifications, which may not always be sent by the bed.
+        """
+        if self.client is None or not self.client.is_connected:
+            _LOGGER.warning("Cannot read positions: not connected")
+            return
+
+        position_chars = [
+            ("back", LINAK_POSITION_BACK_UUID, LINAK_BACK_MAX_POSITION, LINAK_BACK_MAX_ANGLE),
+            ("legs", LINAK_POSITION_LEG_UUID, LINAK_LEG_MAX_POSITION, LINAK_LEG_MAX_ANGLE),
+        ]
+
+        if motor_count > 2:
+            position_chars.append(
+                ("head", LINAK_POSITION_HEAD_UUID, LINAK_HEAD_MAX_POSITION, LINAK_HEAD_MAX_ANGLE)
+            )
+
+        if motor_count > 3:
+            position_chars.append(
+                ("feet", LINAK_POSITION_FEET_UUID, LINAK_FEET_MAX_POSITION, LINAK_FEET_MAX_ANGLE)
+            )
+
+        for name, uuid, max_pos, max_angle in position_chars:
+            try:
+                data = await self.client.read_gatt_char(uuid)
+                if data:
+                    _LOGGER.debug("Read position for %s: %s", name, data.hex())
+                    self._handle_position_data(name, bytearray(data), max_pos, max_angle)
+            except BleakError as err:
+                _LOGGER.debug("Could not read position for %s: %s", name, err)
+
     # Motor control methods
-    # Note: The original TypeScript implementation sends movement commands with repeat,
-    # then sends a STOP command after completion to cleanly end the operation.
+    # Linak protocol requires continuous command sending to keep motors moving
+    # Using 25 repeats @ 200ms = ~5 seconds of movement per press
     async def move_head_up(self) -> None:
         """Move head up."""
-        await self.write_command(LinakCommands.MOVE_HEAD_UP, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_HEAD_UP, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_head_down(self) -> None:
         """Move head down."""
-        await self.write_command(LinakCommands.MOVE_HEAD_DOWN, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_HEAD_DOWN, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_head_stop(self) -> None:
@@ -339,12 +372,12 @@ class LinakController(BedController):
 
     async def move_back_up(self) -> None:
         """Move back up."""
-        await self.write_command(LinakCommands.MOVE_BACK_UP, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_BACK_UP, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_back_down(self) -> None:
         """Move back down."""
-        await self.write_command(LinakCommands.MOVE_BACK_DOWN, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_BACK_DOWN, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_back_stop(self) -> None:
@@ -353,12 +386,12 @@ class LinakController(BedController):
 
     async def move_legs_up(self) -> None:
         """Move legs up."""
-        await self.write_command(LinakCommands.MOVE_LEGS_UP, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_LEGS_UP, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_legs_down(self) -> None:
         """Move legs down."""
-        await self.write_command(LinakCommands.MOVE_LEGS_DOWN, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_LEGS_DOWN, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_legs_stop(self) -> None:
@@ -367,12 +400,12 @@ class LinakController(BedController):
 
     async def move_feet_up(self) -> None:
         """Move feet up."""
-        await self.write_command(LinakCommands.MOVE_FEET_UP, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_FEET_UP, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_feet_down(self) -> None:
         """Move feet down."""
-        await self.write_command(LinakCommands.MOVE_FEET_DOWN, repeat_count=25, repeat_delay_ms=200)
+        await self.write_command(LinakCommands.MOVE_FEET_DOWN, repeat_count=50, repeat_delay_ms=100)
         await self.write_command(LinakCommands.MOVE_STOP)
 
     async def move_feet_stop(self) -> None:
@@ -398,6 +431,7 @@ class LinakController(BedController):
             4: LinakCommands.PRESET_MEMORY_4,
         }
         if command := commands.get(memory_num):
+            # Keep sending command while bed moves to preset position
             await self.write_command(command, repeat_count=100, repeat_delay_ms=300)
 
     async def program_memory(self, memory_num: int) -> None:
