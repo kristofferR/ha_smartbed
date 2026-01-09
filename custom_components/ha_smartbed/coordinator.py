@@ -26,6 +26,7 @@ except ImportError:
 
 from .const import (
     ADAPTER_AUTO,
+    BED_MOTOR_PULSE_DEFAULTS,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
@@ -38,11 +39,15 @@ from .const import (
     CONF_DISABLE_ANGLE_SENSING,
     CONF_HAS_MASSAGE,
     CONF_MOTOR_COUNT,
+    CONF_MOTOR_PULSE_COUNT,
+    CONF_MOTOR_PULSE_DELAY_MS,
     CONF_PREFERRED_ADAPTER,
     CONF_PROTOCOL_VARIANT,
     DEFAULT_DISABLE_ANGLE_SENSING,
     DEFAULT_HAS_MASSAGE,
     DEFAULT_MOTOR_COUNT,
+    DEFAULT_MOTOR_PULSE_COUNT,
+    DEFAULT_MOTOR_PULSE_DELAY_MS,
     DEFAULT_PROTOCOL_VARIANT,
     DOMAIN,
     KEESON_VARIANT_BASE,
@@ -51,7 +56,6 @@ from .const import (
     LEGGETT_VARIANT_OKIN,
     RICHMAT_VARIANT_NORDIC,
     RICHMAT_VARIANT_WILINKE,
-    VARIANT_AUTO,
 )
 
 if TYPE_CHECKING:
@@ -91,6 +95,13 @@ class SmartBedCoordinator:
         self._has_massage: bool = entry.data.get(CONF_HAS_MASSAGE, DEFAULT_HAS_MASSAGE)
         self._disable_angle_sensing: bool = entry.data.get(CONF_DISABLE_ANGLE_SENSING, DEFAULT_DISABLE_ANGLE_SENSING)
         self._preferred_adapter: str = entry.data.get(CONF_PREFERRED_ADAPTER, ADAPTER_AUTO)
+
+        # Get bed-type-specific motor pulse defaults, falling back to global defaults
+        bed_pulse_defaults = BED_MOTOR_PULSE_DEFAULTS.get(
+            self._bed_type, (DEFAULT_MOTOR_PULSE_COUNT, DEFAULT_MOTOR_PULSE_DELAY_MS)
+        )
+        self._motor_pulse_count: int = entry.data.get(CONF_MOTOR_PULSE_COUNT, bed_pulse_defaults[0])
+        self._motor_pulse_delay_ms: int = entry.data.get(CONF_MOTOR_PULSE_DELAY_MS, bed_pulse_defaults[1])
 
         self._client: BleakClient | None = None
         self._controller: BedController | None = None
@@ -204,6 +215,16 @@ class SmartBedCoordinator:
     def disable_angle_sensing(self) -> bool:
         """Return whether angle sensing is disabled."""
         return self._disable_angle_sensing
+
+    @property
+    def motor_pulse_count(self) -> int:
+        """Return the motor pulse count."""
+        return self._motor_pulse_count
+
+    @property
+    def motor_pulse_delay_ms(self) -> int:
+        """Return the motor pulse delay in milliseconds."""
+        return self._motor_pulse_delay_ms
 
     @property
     def controller(self) -> BedController | None:
@@ -724,7 +745,11 @@ class SmartBedCoordinator:
                 # Auto-detect variant based on available services
                 _LOGGER.debug("Auto-detecting Richmat variant...")
                 is_wilinke, char_uuid = await detect_richmat_variant(self._client)
-                return RichmatController(self, is_wilinke=is_wilinke, char_uuid=char_uuid)
+                return RichmatController(
+                    self,
+                    is_wilinke=is_wilinke,
+                    char_uuid=char_uuid,
+                )
 
         if self._bed_type == BED_TYPE_KEESON:
             from .beds.keeson import KeesonController

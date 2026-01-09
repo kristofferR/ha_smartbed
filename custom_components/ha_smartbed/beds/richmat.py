@@ -15,6 +15,8 @@ from bleak.exc import BleakError
 
 from ..const import (
     RICHMAT_NORDIC_CHAR_UUID,
+    RICHMAT_PROTOCOL_SINGLE,
+    RICHMAT_PROTOCOL_WILINKE,
     RICHMAT_WILINKE_CHAR_UUIDS,
     RICHMAT_WILINKE_SERVICE_UUIDS,
 )
@@ -89,10 +91,17 @@ class RichmatController(BedController):
         self._is_wilinke = is_wilinke
         self._char_uuid = char_uuid or RICHMAT_NORDIC_CHAR_UUID
         self._notify_callback: Callable[[str, float], None] | None = None
+
+        # Determine command protocol based on variant
+        self._command_protocol = (
+            RICHMAT_PROTOCOL_WILINKE if is_wilinke else RICHMAT_PROTOCOL_SINGLE
+        )
+
         _LOGGER.debug(
-            "RichmatController initialized (wilinke: %s, char: %s)",
+            "RichmatController initialized (wilinke: %s, char: %s, protocol: %s)",
             is_wilinke,
             self._char_uuid,
+            self._command_protocol,
         )
 
     @property
@@ -101,13 +110,13 @@ class RichmatController(BedController):
         return self._char_uuid
 
     def _build_command(self, command_byte: int) -> bytes:
-        """Build command bytes based on protocol variant."""
-        if self._is_wilinke:
+        """Build command bytes based on command protocol."""
+        if self._command_protocol == RICHMAT_PROTOCOL_WILINKE:
             # WiLinke: [110, 1, 0, command, checksum]
             # checksum = command + 111
             return bytes([110, 1, 0, command_byte, (command_byte + 111) & 0xFF])
         else:
-            # Nordic: just the command byte
+            # Single/Nordic: just the command byte
             return bytes([command_byte])
 
     async def write_command(
@@ -142,6 +151,14 @@ class RichmatController(BedController):
                 )
             except BleakError as err:
                 _LOGGER.error("Failed to write command: %s", err)
+                # Log discovered services to help debug characteristic not found issues
+                if "not found" in str(err).lower() or "invalid" in str(err).lower():
+                    _LOGGER.warning(
+                        "Characteristic %s may not exist on this device. "
+                        "Please report this to help add support for your device.",
+                        self._char_uuid,
+                    )
+                    self.log_discovered_services(level=logging.INFO)
                 raise
 
             if i < repeat_count - 1:
@@ -162,10 +179,12 @@ class RichmatController(BedController):
         # Richmat beds don't support position reading
         pass
 
-    async def _send_command(self, command_byte: int, repeat: int = 30) -> None:
+    async def _send_command(self, command_byte: int, repeat: int | None = None) -> None:
         """Send a command to the bed."""
         command = self._build_command(command_byte)
-        await self.write_command(command, repeat_count=repeat, repeat_delay_ms=50)
+        pulse_count = repeat if repeat is not None else self._coordinator.motor_pulse_count
+        pulse_delay = self._coordinator.motor_pulse_delay_ms
+        await self.write_command(command, repeat_count=pulse_count, repeat_delay_ms=pulse_delay)
 
     async def _move_with_stop(self, command_byte: int) -> None:
         """Execute a movement command and always send STOP at the end."""

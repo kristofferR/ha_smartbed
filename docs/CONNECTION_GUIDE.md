@@ -98,6 +98,24 @@ If your Home Assistant host has a Bluetooth adapter (built-in or USB dongle).
    - **Name**: Friendly name for your bed
    - **Motor Count**: See below
    - **Has Massage**: Enable if your bed has massage
+   - **Protocol Variant** (if available): Usually leave as "auto"
+   - **Command Protocol** (Richmat only): Try different protocols if bed doesn't respond
+
+---
+
+## Advanced Options
+
+After setup, you can adjust additional settings via **Settings → Integrations → Smart Bed → Configure**:
+
+| Setting | Description |
+|---------|-------------|
+| Protocol Variant | Override auto-detected variant (Keeson: base/ksbt, Richmat: nordic/wilinke) |
+| Command Protocol | Richmat only: Override command byte encoding |
+| Motor Pulse Count | Fine-tune motor movement duration (1-100) |
+| Motor Pulse Delay | Fine-tune motor smoothness (10-500ms) |
+| Bluetooth Adapter | Choose specific adapter or proxy |
+
+See [Motor Pulse Settings](SUPPORTED_BEDS.md#motor-pulse-settings) for details on pulse configuration.
 
 ---
 

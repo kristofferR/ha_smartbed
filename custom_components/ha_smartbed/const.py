@@ -11,6 +11,8 @@ CONF_MOTOR_COUNT: Final = "motor_count"
 CONF_HAS_MASSAGE: Final = "has_massage"
 CONF_DISABLE_ANGLE_SENSING: Final = "disable_angle_sensing"
 CONF_PREFERRED_ADAPTER: Final = "preferred_adapter"
+CONF_MOTOR_PULSE_COUNT: Final = "motor_pulse_count"
+CONF_MOTOR_PULSE_DELAY_MS: Final = "motor_pulse_delay_ms"
 
 # Special value for auto adapter selection
 ADAPTER_AUTO: Final = "auto"
@@ -82,11 +84,21 @@ RICHMAT_WILINKE_CHAR_UUIDS: Final = [
 KEESON_KSBT_SERVICE_UUID: Final = "6e400001-b5a3-f393-e0a9-e50e24dcca9e"
 KEESON_KSBT_CHAR_UUID: Final = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
 
-# BaseI4/BaseI5 variant
+# BaseI4/BaseI5 variant - primary UUIDs
 KEESON_BASE_SERVICE_UUID: Final = "0000ffe5-0000-1000-8000-00805f9b34fb"
 KEESON_BASE_WRITE_CHAR_UUID: Final = "0000ffe9-0000-1000-8000-00805f9b34fb"
 KEESON_BASE_NOTIFY_SERVICE_UUID: Final = "0000ffe0-0000-1000-8000-00805f9b34fb"
 KEESON_BASE_NOTIFY_CHAR_UUID: Final = "0000ffe4-0000-1000-8000-00805f9b34fb"
+
+# Keeson fallback service/characteristic UUIDs for improved compatibility
+# Some Keeson beds use different UUIDs - try these if primary fails
+KEESON_FALLBACK_GATT_PAIRS: Final = [
+    # Primary: 0000ffe5/0000ffe9 (already defined above)
+    # Fallback 1: 0000fff0/0000fff2
+    ("0000fff0-0000-1000-8000-00805f9b34fb", "0000fff2-0000-1000-8000-00805f9b34fb"),
+    # Fallback 2: 0000ffb0/0000ffb2
+    ("0000ffb0-0000-1000-8000-00805f9b34fb", "0000ffb2-0000-1000-8000-00805f9b34fb"),
+]
 
 # Solace specific UUIDs
 SOLACE_SERVICE_UUID: Final = "0000ffe0-0000-1000-8000-00805f9b34fb"
@@ -145,6 +157,10 @@ RICHMAT_VARIANTS: Final = {
     RICHMAT_VARIANT_WILINKE: "WiLinke (5-byte commands with checksum)",
 }
 
+# Richmat command protocols (how command bytes are encoded - used internally)
+RICHMAT_PROTOCOL_WILINKE: Final = "wilinke"  # [110, 1, 0, cmd, cmd+111]
+RICHMAT_PROTOCOL_SINGLE: Final = "single"  # [cmd]
+
 # All protocol variants (for validation)
 ALL_PROTOCOL_VARIANTS: Final = [
     VARIANT_AUTO,
@@ -161,4 +177,18 @@ DEFAULT_MOTOR_COUNT: Final = 2
 DEFAULT_HAS_MASSAGE: Final = False
 DEFAULT_DISABLE_ANGLE_SENSING: Final = True
 DEFAULT_PROTOCOL_VARIANT: Final = VARIANT_AUTO
+
+# Default motor pulse values (can be overridden per device)
+# These control how many command pulses are sent and the delay between them
+# Different bed types have different optimal defaults
+DEFAULT_MOTOR_PULSE_COUNT: Final = 25  # Default for most beds
+DEFAULT_MOTOR_PULSE_DELAY_MS: Final = 50  # Default for most beds
+
+# Per-bed-type motor pulse defaults (to preserve original behavior)
+BED_MOTOR_PULSE_DEFAULTS: Final = {
+    # Richmat: 30 repeats, 50ms delay (original hardcoded values)
+    BED_TYPE_RICHMAT: (30, 50),
+    # Keeson: 25 repeats, 200ms delay (original hardcoded values)
+    BED_TYPE_KEESON: (25, 200),
+}
 

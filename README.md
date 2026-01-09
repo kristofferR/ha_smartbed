@@ -94,6 +94,9 @@ The integration will automatically discover supported beds via Bluetooth based o
    - **Name**: Friendly name for your bed
    - **Motor Count**: Number of motors (2, 3, or 4)
    - **Has Massage**: Whether your bed has massage functionality
+   - **Protocol Variant**: For beds with multiple variants (auto-detect usually works)
+   - **Command Protocol** (Richmat only): Try different protocols if bed doesn't respond
+   - **Motor Pulse Settings** (Advanced): Fine-tune motor movement timing
 
 ## Bluetooth Setup
 

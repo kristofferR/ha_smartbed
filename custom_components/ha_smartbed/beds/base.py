@@ -51,6 +51,45 @@ class BedController(ABC):
         """Return the BLE client."""
         return self._coordinator.client
 
+    def log_discovered_services(self, level: int = logging.DEBUG) -> None:
+        """Log all discovered GATT services and characteristics.
+
+        Useful for debugging when expected services/characteristics are not found.
+        Call this method when the controller fails to find the expected BLE
+        services to help users report issues with new device variants.
+
+        Args:
+            level: Logging level (default: DEBUG). Use logging.INFO for
+                   more visibility when debugging connection issues.
+        """
+        client = self.client
+        if client is None or client.services is None:
+            _LOGGER.log(level, "No BLE services discovered (client not connected)")
+            return
+
+        services_count = len(list(client.services))
+        _LOGGER.log(
+            level,
+            "Discovered %d GATT services on %s:",
+            services_count,
+            self._coordinator.address,
+        )
+
+        for service in client.services:
+            _LOGGER.log(
+                level,
+                "  Service: %s",
+                service.uuid,
+            )
+            for char in service.characteristics:
+                props = ", ".join(char.properties)
+                _LOGGER.log(
+                    level,
+                    "    Char: %s [%s]",
+                    char.uuid,
+                    props,
+                )
+
     @property
     @abstractmethod
     def control_characteristic_uuid(self) -> str:

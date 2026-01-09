@@ -188,9 +188,13 @@ Position data available via notify characteristics:
 ### Protocol Variants
 
 #### Base Variant (BaseI4/BaseI5) - Most Common
-**Service UUID:** `0000ffe5-0000-1000-8000-00805f9b34fb`
+**Primary Service UUID:** `0000ffe5-0000-1000-8000-00805f9b34fb`
 **Format:** 8 bytes `[0xE5, 0xFE, 0x16, b4, b5, b6, b7, checksum]`
 **Checksum:** `sum(bytes) XOR 0xFF`
+
+**Fallback Service UUIDs:** Some Keeson beds use different service UUIDs. The integration automatically tries these if the primary isn't found:
+- `0000fff0-0000-1000-8000-00805f9b34fb` (characteristic: `0000fff2`)
+- `0000ffb0-0000-1000-8000-00805f9b34fb` (characteristic: `0000ffb2`)
 
 #### KSBT Variant (Older Remotes)
 **Service UUID:** `6e400001-b5a3-f393-e0a9-e50e24dcca9e`
@@ -519,6 +523,31 @@ Uses same 32-bit command values as Keeson - see [Keeson commands](#commands-32-b
 **⚠️ Requires BLE pairing before use!**
 
 Uses same 32-bit command values as Keeson - see [Keeson commands](#commands-32-bit-values).
+
+---
+
+## Advanced Configuration
+
+### Motor Pulse Settings
+
+For fine-tuning motor movement behavior, you can adjust these settings in the integration options:
+
+| Setting | Range | Default | Description |
+|---------|-------|---------|-------------|
+| Motor Pulse Count | 1-100 | Bed-specific | Number of command repeats sent for motor movement |
+| Motor Pulse Delay (ms) | 10-500 | Bed-specific | Delay between command pulses |
+
+**Default values by bed type:**
+| Bed Type | Pulse Count | Pulse Delay |
+|----------|-------------|-------------|
+| Richmat | 30 | 50ms |
+| Keeson | 25 | 200ms |
+| Others | 25 | 50ms |
+
+**When to adjust:**
+- **Increase pulse count** if motors stop moving too soon
+- **Decrease pulse delay** for smoother movement
+- **Increase pulse delay** if commands are getting dropped
 
 ---
 

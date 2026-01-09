@@ -17,7 +17,9 @@ from typing import TYPE_CHECKING, Callable
 from bleak.exc import BleakError
 
 from ..const import (
+    KEESON_BASE_SERVICE_UUID,
     KEESON_BASE_WRITE_CHAR_UUID,
+    KEESON_FALLBACK_GATT_PAIRS,
     KEESON_KSBT_CHAR_UUID,
 )
 from .base import BedController
@@ -90,16 +92,62 @@ class KeesonController(BedController):
         """
         super().__init__(coordinator)
         self._variant = variant
-        self._char_uuid = char_uuid or (
-            KEESON_KSBT_CHAR_UUID if variant == "ksbt" else KEESON_BASE_WRITE_CHAR_UUID
-        )
         self._notify_callback: Callable[[str, float], None] | None = None
         self._motor_state: dict[str, bool | None] = {}
+
+        # Determine the characteristic UUID
+        if char_uuid:
+            self._char_uuid = char_uuid
+        elif variant == "ksbt":
+            self._char_uuid = KEESON_KSBT_CHAR_UUID
+        else:
+            # For base variant, try to find a working characteristic UUID
+            self._char_uuid = self._detect_characteristic_uuid()
+
         _LOGGER.debug(
             "KeesonController initialized (variant: %s, char: %s)",
             variant,
             self._char_uuid,
         )
+
+    def _detect_characteristic_uuid(self) -> str:
+        """Detect the correct write characteristic UUID from available services.
+
+        Tries the primary UUID first, then falls back to alternative UUIDs
+        if the primary service is not available.
+        """
+        client = self.client
+        if client is None or client.services is None:
+            _LOGGER.debug("No BLE services available, using default UUID")
+            return KEESON_BASE_WRITE_CHAR_UUID
+
+        # Get all available service UUIDs
+        available_services = {str(service.uuid).lower() for service in client.services}
+        _LOGGER.debug("Available Keeson services: %s", available_services)
+
+        # Check if primary service is available
+        if KEESON_BASE_SERVICE_UUID.lower() in available_services:
+            _LOGGER.debug("Found primary Keeson service, using primary UUID")
+            return KEESON_BASE_WRITE_CHAR_UUID
+
+        # Try fallback service/characteristic pairs
+        for fallback_service, fallback_char in KEESON_FALLBACK_GATT_PAIRS:
+            if fallback_service.lower() in available_services:
+                _LOGGER.info(
+                    "Primary Keeson service not found, using fallback: %s/%s",
+                    fallback_service,
+                    fallback_char,
+                )
+                return fallback_char
+
+        # No matching service found, log all services for debugging and use default
+        _LOGGER.warning(
+            "No recognized Keeson service found. "
+            "Please report this to help add support for your device."
+        )
+        # Log all discovered services at INFO level to help with debugging
+        self.log_discovered_services(level=logging.INFO)
+        return KEESON_BASE_WRITE_CHAR_UUID
 
     @property
     def control_characteristic_uuid(self) -> str:
@@ -200,8 +248,8 @@ class KeesonController(BedController):
         if command:
             await self.write_command(
                 self._build_command(command),
-                repeat_count=25,
-                repeat_delay_ms=200,
+                repeat_count=self._coordinator.motor_pulse_count,
+                repeat_delay_ms=self._coordinator.motor_pulse_delay_ms,
             )
         # Send stop (zero command)
         self._motor_state = {}

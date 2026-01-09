@@ -185,6 +185,18 @@ This guide covers common issues and their solutions when using the Smart Bed int
 | 5-byte commands with checksum | WiLinke |
 | Auto-detect fails | Try Nordic first, then WiLinke |
 
+### Motor Movement Issues
+
+If motors move too briefly or movement is choppy, adjust **Motor Pulse Settings**:
+
+| Symptom | Solution |
+|---------|----------|
+| Motors stop too soon | Increase pulse count |
+| Movement is choppy | Decrease pulse delay |
+| Commands get dropped | Increase pulse delay |
+
+See [Motor Pulse Settings](SUPPORTED_BEDS.md#motor-pulse-settings) for default values by bed type.
+
 ---
 
 ## Pairing Required (Okimat/Leggett Okin)
@@ -223,6 +235,7 @@ Some beds require Bluetooth pairing before they can be controlled.
 
 1. **Check logs:** Look at Home Assistant logs for error messages
    - Settings → System → Logs → Filter by "ha_smartbed"
+   - **Tip:** If your bed isn't responding, the integration will log all discovered GATT services at INFO level. This helps us add support for new device variants.
 
 2. **Download diagnostics:**
    - Settings → Integrations → Smart Bed → ⋮ → Download diagnostics
@@ -231,6 +244,13 @@ Some beds require Bluetooth pairing before they can be controlled.
 3. **Test with BLE scanner:**
    - Use an app like "nRF Connect" to verify your bed is advertising
    - Note the service UUIDs - these help identify the correct bed type
+
+4. **Enable debug logging** to see detailed GATT service information:
+   ```yaml
+   logger:
+     logs:
+       custom_components.ha_smartbed: debug
+   ```
 
 ### Information to Include in Bug Reports
 
@@ -255,7 +275,9 @@ Use these to identify your bed type in a BLE scanner:
 |------|----------|
 | `99fa0001-338a-1024-8a49-009c0215f78a` | Linak |
 | `6e400001-b5a3-f393-e0a9-e50e24dcca9e` | Richmat Nordic / Keeson KSBT |
-| `0000ffe5-0000-1000-8000-00805f9b34fb` | Keeson Base |
+| `0000ffe5-0000-1000-8000-00805f9b34fb` | Keeson Base (primary) |
+| `0000fff0-0000-1000-8000-00805f9b34fb` | Keeson Base (fallback 1) |
+| `0000ffb0-0000-1000-8000-00805f9b34fb` | Keeson Base (fallback 2) |
 | `0000ffe0-0000-1000-8000-00805f9b34fb` | Solace / MotoSleep |
 | `45e25100-3171-4cfc-ae89-1d83cf8d8071` | Leggett & Platt Gen2 |
 | `62741523-52f9-8864-b1ab-3b3a8d65950b` | Okimat / Leggett Okin |
