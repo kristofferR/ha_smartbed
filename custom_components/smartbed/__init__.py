@@ -1,0 +1,191 @@
+"""The Smart Bed integration."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+
+import voluptuous as vol
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_ADDRESS, CONF_DEVICE_ID, Platform
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import device_registry as dr
+
+from .const import CONF_BED_TYPE, CONF_HAS_MASSAGE, CONF_MOTOR_COUNT, DOMAIN
+from .coordinator import SmartBedCoordinator
+
+# Service constants
+SERVICE_GOTO_PRESET = "goto_preset"
+SERVICE_SAVE_PRESET = "save_preset"
+SERVICE_STOP_ALL = "stop_all"
+ATTR_PRESET = "preset"
+
+# Timeout for initial connection at startup
+SETUP_TIMEOUT = 15.0
+
+_LOGGER = logging.getLogger(__name__)
+
+PLATFORMS: list[Platform] = [
+    Platform.BUTTON,
+    Platform.COVER,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Smart Bed from a config entry."""
+    _LOGGER.info(
+        "Setting up Smart Bed integration for %s (address: %s, type: %s, motors: %s, massage: %s)",
+        entry.title,
+        entry.data.get(CONF_ADDRESS),
+        entry.data.get(CONF_BED_TYPE),
+        entry.data.get(CONF_MOTOR_COUNT),
+        entry.data.get(CONF_HAS_MASSAGE),
+    )
+
+    coordinator = SmartBedCoordinator(hass, entry)
+
+    # Connect to the bed with a timeout to avoid blocking startup forever
+    _LOGGER.debug("Attempting initial connection to bed (timeout: %.0fs)...", SETUP_TIMEOUT)
+    try:
+        async with asyncio.timeout(SETUP_TIMEOUT):
+            connected = await coordinator.async_connect()
+    except TimeoutError:
+        raise ConfigEntryNotReady(
+            f"Connection to bed at {entry.data.get(CONF_ADDRESS)} timed out after {SETUP_TIMEOUT:.0f}s. "
+            "The integration will retry automatically."
+        ) from None
+
+    if not connected:
+        raise ConfigEntryNotReady(
+            f"Failed to connect to bed at {entry.data.get(CONF_ADDRESS)}. "
+            "Check that the bed is powered on and in range of your Bluetooth adapter/proxy."
+        )
+
+    _LOGGER.info("Successfully connected to bed at %s", entry.data.get(CONF_ADDRESS))
+
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = coordinator
+
+    _LOGGER.debug("Setting up platforms: %s", PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    # Start listening for position updates
+    _LOGGER.debug("Starting position notifications...")
+    await coordinator.async_start_notify()
+
+    # Register services if not already registered
+    await _async_register_services(hass)
+
+    _LOGGER.info("Smart Bed integration setup complete for %s", entry.title)
+    return True
+
+
+async def _async_register_services(hass: HomeAssistant) -> None:
+    """Register Smart Bed services."""
+    if hass.services.has_service(DOMAIN, SERVICE_GOTO_PRESET):
+        return  # Services already registered
+
+    async def _get_coordinator_from_device(
+        hass: HomeAssistant, device_id: str
+    ) -> SmartBedCoordinator | None:
+        """Get coordinator from device ID."""
+        device_registry = dr.async_get(hass)
+        device = device_registry.async_get(device_id)
+        if not device:
+            return None
+
+        for entry_id in device.config_entries:
+            if entry_id in hass.data.get(DOMAIN, {}):
+                return hass.data[DOMAIN][entry_id]
+        return None
+
+    async def handle_goto_preset(call: ServiceCall) -> None:
+        """Handle goto_preset service call."""
+        preset = call.data[ATTR_PRESET]
+        device_ids = call.data.get(CONF_DEVICE_ID, [])
+
+        for device_id in device_ids:
+            coordinator = await _get_coordinator_from_device(hass, device_id)
+            if coordinator and coordinator.controller:
+                await coordinator.async_ensure_connected()
+                await coordinator.controller.preset_memory(preset)
+
+    async def handle_save_preset(call: ServiceCall) -> None:
+        """Handle save_preset service call."""
+        preset = call.data[ATTR_PRESET]
+        device_ids = call.data.get(CONF_DEVICE_ID, [])
+
+        for device_id in device_ids:
+            coordinator = await _get_coordinator_from_device(hass, device_id)
+            if coordinator and coordinator.controller:
+                await coordinator.async_ensure_connected()
+                await coordinator.controller.program_memory(preset)
+
+    async def handle_stop_all(call: ServiceCall) -> None:
+        """Handle stop_all service call."""
+        device_ids = call.data.get(CONF_DEVICE_ID, [])
+
+        for device_id in device_ids:
+            coordinator = await _get_coordinator_from_device(hass, device_id)
+            if coordinator and coordinator.controller:
+                await coordinator.async_ensure_connected()
+                await coordinator.controller.stop_all()
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_GOTO_PRESET,
+        handle_goto_preset,
+        schema=vol.Schema(
+            {
+                vol.Required(CONF_DEVICE_ID): vol.All(vol.Coerce(list)),
+                vol.Required(ATTR_PRESET): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=4)
+                ),
+            }
+        ),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SAVE_PRESET,
+        handle_save_preset,
+        schema=vol.Schema(
+            {
+                vol.Required(CONF_DEVICE_ID): vol.All(vol.Coerce(list)),
+                vol.Required(ATTR_PRESET): vol.All(
+                    vol.Coerce(int), vol.Range(min=1, max=4)
+                ),
+            }
+        ),
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_STOP_ALL,
+        handle_stop_all,
+        schema=vol.Schema(
+            {
+                vol.Required(CONF_DEVICE_ID): vol.All(vol.Coerce(list)),
+            }
+        ),
+    )
+
+    _LOGGER.debug("Registered Smart Bed services")
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    _LOGGER.info("Unloading Smart Bed integration for %s", entry.title)
+
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        coordinator: SmartBedCoordinator = hass.data[DOMAIN].pop(entry.entry_id)
+        _LOGGER.debug("Disconnecting from bed...")
+        await coordinator.async_disconnect()
+        _LOGGER.info("Successfully unloaded Smart Bed integration for %s", entry.title)
+
+    return unload_ok
+

@@ -1,0 +1,40 @@
+goto_preset:
+  name: Go to Preset
+  description: Move bed to a saved memory position.
+  target:
+    device:
+      integration: smartbed
+  fields:
+    preset:
+      name: Preset Number
+      description: Memory slot number (1-4).
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          mode: box
+
+save_preset:
+  name: Save to Preset
+  description: Save current bed position to a memory slot.
+  target:
+    device:
+      integration: smartbed
+  fields:
+    preset:
+      name: Preset Number
+      description: Memory slot number (1-4).
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 4
+          mode: box
+
+stop_all:
+  name: Stop All Motors
+  description: Immediately stop all bed motors.
+  target:
+    device:
+      integration: smartbed
