@@ -42,7 +42,7 @@ custom_components/smartbed/
 **SmartBedCoordinator** (`coordinator.py`): Central BLE connection manager
 - Handles device discovery via HA's Bluetooth integration
 - Connection retry with progressive backoff (3 attempts, 5-7.5s delays)
-- Auto-disconnect after idle (60s with angle sensing, 45s without)
+- Auto-disconnect after 40s idle (allows physical remote/app to connect)
 - Registers conservative BLE connection parameters (30-50ms intervals)
 - Supports preferred adapter selection for multi-proxy setups
 - Command serialization via `_command_lock` prevents concurrent BLE writes
@@ -114,7 +114,7 @@ Motor commands:
   0x00 = stop all
 
 Motor timing:
-  - 50 repeats at 100ms intervals (5 seconds total movement)
+  - 25 repeats at 100ms intervals (2.5 seconds total movement)
   - ALWAYS send STOP (0x00) after movement - use try/finally pattern
 
 Presets:
@@ -155,7 +155,7 @@ These details were discovered by comparing with the working smartbed-mqtt implem
 
 5. **Disconnect timer management** - Timer is cancelled when a command starts (inside the lock) and reset when it ends. This prevents mid-command disconnects for long operations.
 
-6. **Presets are long operations** - 100 repeats × 300ms = 30 seconds. Idle timeout must be >30s (currently 45s when angle sensing disabled).
+6. **Presets are long operations** - 100 repeats × 300ms = 30 seconds max. Idle timeout is 40s.
 
 7. **Intentional disconnect flag** - Set before `client.disconnect()`, checked in `_on_disconnect` to skip auto-reconnect. Cleared in finally block since callback may not fire on clean disconnects.
 

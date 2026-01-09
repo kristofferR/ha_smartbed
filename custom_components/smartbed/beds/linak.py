@@ -359,14 +359,14 @@ class LinakController(BedController):
 
     # Motor control methods
     # Linak protocol requires continuous command sending to keep motors moving
-    # Using 50 repeats @ 100ms = ~5 seconds of movement per press
+    # Using 25 repeats @ 100ms = ~2.5 seconds of movement per press
     # All movement methods use try/finally to ensure STOP is always sent,
     # even if the movement is cancelled mid-way.
 
     async def _move_with_stop(self, move_command: bytes) -> None:
         """Execute a movement command and always send STOP at the end."""
         try:
-            await self.write_command(move_command, repeat_count=50, repeat_delay_ms=100)
+            await self.write_command(move_command, repeat_count=25, repeat_delay_ms=100)
         finally:
             # Always send STOP with a fresh event so it's not affected by cancellation
             await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())

@@ -47,8 +47,8 @@ _LOGGER = logging.getLogger(__name__)
 MAX_RETRIES = 3
 RETRY_DELAY = 5.0  # Increased delay between retries for BLE stability
 CONNECTION_TIMEOUT = 30.0  # Timeout for BLE connection attempts
-DISCONNECT_TIMEOUT = 60.0
-DISCONNECT_TIMEOUT_NO_SENSING = 45.0  # Disconnect when angle sensing disabled (must be > preset time of ~30s)
+DISCONNECT_TIMEOUT = 40.0
+DISCONNECT_TIMEOUT_NO_SENSING = 40.0  # Disconnect when idle (must be > preset time)
 POST_CONNECT_DELAY = 1.0  # Delay after connection to let it stabilize
 
 # BLE connection parameters - use conservative/compatible values
