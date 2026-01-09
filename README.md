@@ -2,7 +2,7 @@
 
 A Home Assistant custom integration for controlling smart adjustable beds via Bluetooth Low Energy (BLE).
 
-**A massive thanks to the developers of [smartbed-mqtt](https://github.com/kanten-website/smartbed-mqtt)!** This integration wouldn't have been possible without their pioneering work reverse-engineering bed protocols and building the original MQTT-based solution.
+**A massive thanks to the developers of [smartbed-mqtt](https://github.com/richardhopton/smartbed-mqtt)!** This integration wouldn't have been possible without their pioneering work reverse-engineering bed protocols and building the original MQTT-based solution.
 
 > **Warning: Alpha Software**
 >
