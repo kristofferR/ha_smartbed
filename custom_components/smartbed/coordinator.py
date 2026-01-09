@@ -703,16 +703,18 @@ class SmartBedCoordinator:
             if self._client is not None:
                 _LOGGER.info("Disconnecting from bed at %s", self._address)
                 # Mark as intentional so _on_disconnect doesn't trigger auto-reconnect
+                # Note: _on_disconnect will clear this flag after checking it
                 self._intentional_disconnect = True
                 try:
                     await self._client.disconnect()
                     _LOGGER.debug("Successfully disconnected from %s", self._address)
                 except BleakError as err:
                     _LOGGER.debug("Error during disconnect from %s: %s", self._address, err)
+                    # Clear flag on error since _on_disconnect may not fire
+                    self._intentional_disconnect = False
                 finally:
                     self._client = None
                     self._controller = None
-                    self._intentional_disconnect = False
 
     def _reset_disconnect_timer(self) -> None:
         """Reset the disconnect timer."""
@@ -798,28 +800,27 @@ class SmartBedCoordinator:
             self._reset_disconnect_timer()
 
     async def async_stop_command(self) -> None:
-        """Immediately stop any running command and send stop to bed.
-
-        This bypasses the command lock to ensure immediate response.
-        """
+        """Immediately stop any running command and send stop to bed."""
         _LOGGER.info("Stop requested - cancelling current command")
 
         # Signal cancellation to any running command
         self._cancel_command.set()
 
-        # Ensure connected and send stop immediately
-        if not await self.async_ensure_connected():
-            _LOGGER.error("Cannot send stop: not connected to bed")
-            return
+        # Acquire the command lock to wait for any in-flight GATT write to complete
+        # This prevents concurrent BLE writes which cause "operation in progress" errors
+        async with self._command_lock:
+            if not await self.async_ensure_connected():
+                _LOGGER.error("Cannot send stop: not connected to bed")
+                return
 
-        if self._controller is None:
-            _LOGGER.error("Cannot send stop: no controller available")
-            return
+            if self._controller is None:
+                _LOGGER.error("Cannot send stop: no controller available")
+                return
 
-        # Send stop command with a fresh event so it's not cancelled by our own cancel signal
-        await self._controller.write_command(bytes([0x00, 0x00]), cancel_event=asyncio.Event())
-        self._reset_disconnect_timer()
-        _LOGGER.info("Stop command sent")
+            # Send stop command with a fresh event so it's not cancelled by our own cancel signal
+            await self._controller.write_command(bytes([0x00, 0x00]), cancel_event=asyncio.Event())
+            self._reset_disconnect_timer()
+            _LOGGER.info("Stop command sent")
 
     async def async_execute_controller_command(
         self,

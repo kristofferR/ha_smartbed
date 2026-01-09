@@ -36,8 +36,16 @@ class BedController(ABC):
         command: bytes,
         repeat_count: int = 1,
         repeat_delay_ms: int = 100,
+        cancel_event: asyncio.Event | None = None,
     ) -> None:
-        """Write a command to the bed."""
+        """Write a command to the bed.
+
+        Args:
+            command: The command bytes to send
+            repeat_count: Number of times to repeat the command
+            repeat_delay_ms: Delay between repeats in milliseconds
+            cancel_event: Optional event that signals cancellation
+        """
 
     @abstractmethod
     async def start_notify(
@@ -48,6 +56,10 @@ class BedController(ABC):
     @abstractmethod
     async def stop_notify(self) -> None:
         """Stop listening for position notifications."""
+
+    @abstractmethod
+    async def read_positions(self, motor_count: int = 2) -> None:
+        """Read current position data from all motor position characteristics."""
 
     # Motor control methods
     @abstractmethod
@@ -63,6 +75,18 @@ class BedController(ABC):
         """Stop head motor."""
 
     @abstractmethod
+    async def move_back_up(self) -> None:
+        """Move back up."""
+
+    @abstractmethod
+    async def move_back_down(self) -> None:
+        """Move back down."""
+
+    @abstractmethod
+    async def move_back_stop(self) -> None:
+        """Stop back motor."""
+
+    @abstractmethod
     async def move_legs_up(self) -> None:
         """Move legs up."""
 
@@ -73,6 +97,18 @@ class BedController(ABC):
     @abstractmethod
     async def move_legs_stop(self) -> None:
         """Stop legs motor."""
+
+    @abstractmethod
+    async def move_feet_up(self) -> None:
+        """Move feet up."""
+
+    @abstractmethod
+    async def move_feet_down(self) -> None:
+        """Move feet down."""
+
+    @abstractmethod
+    async def move_feet_stop(self) -> None:
+        """Stop feet motor."""
 
     @abstractmethod
     async def stop_all(self) -> None:

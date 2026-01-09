@@ -359,66 +359,69 @@ class LinakController(BedController):
 
     # Motor control methods
     # Linak protocol requires continuous command sending to keep motors moving
-    # Using 25 repeats @ 200ms = ~5 seconds of movement per press
+    # Using 50 repeats @ 100ms = ~5 seconds of movement per press
+    # All movement methods use try/finally to ensure STOP is always sent,
+    # even if the movement is cancelled mid-way.
+
+    async def _move_with_stop(self, move_command: bytes) -> None:
+        """Execute a movement command and always send STOP at the end."""
+        try:
+            await self.write_command(move_command, repeat_count=50, repeat_delay_ms=100)
+        finally:
+            # Always send STOP with a fresh event so it's not affected by cancellation
+            await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
+
     async def move_head_up(self) -> None:
         """Move head up."""
-        await self.write_command(LinakCommands.MOVE_HEAD_UP, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_HEAD_UP)
 
     async def move_head_down(self) -> None:
         """Move head down."""
-        await self.write_command(LinakCommands.MOVE_HEAD_DOWN, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_HEAD_DOWN)
 
     async def move_head_stop(self) -> None:
         """Stop head motor."""
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
 
     async def move_back_up(self) -> None:
         """Move back up."""
-        await self.write_command(LinakCommands.MOVE_BACK_UP, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_BACK_UP)
 
     async def move_back_down(self) -> None:
         """Move back down."""
-        await self.write_command(LinakCommands.MOVE_BACK_DOWN, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_BACK_DOWN)
 
     async def move_back_stop(self) -> None:
         """Stop back motor."""
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
 
     async def move_legs_up(self) -> None:
         """Move legs up."""
-        await self.write_command(LinakCommands.MOVE_LEGS_UP, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_LEGS_UP)
 
     async def move_legs_down(self) -> None:
         """Move legs down."""
-        await self.write_command(LinakCommands.MOVE_LEGS_DOWN, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_LEGS_DOWN)
 
     async def move_legs_stop(self) -> None:
         """Stop legs motor."""
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
 
     async def move_feet_up(self) -> None:
         """Move feet up."""
-        await self.write_command(LinakCommands.MOVE_FEET_UP, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_FEET_UP)
 
     async def move_feet_down(self) -> None:
         """Move feet down."""
-        await self.write_command(LinakCommands.MOVE_FEET_DOWN, repeat_count=50, repeat_delay_ms=100)
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self._move_with_stop(LinakCommands.MOVE_FEET_DOWN)
 
     async def move_feet_stop(self) -> None:
         """Stop feet motor."""
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
 
     async def stop_all(self) -> None:
         """Stop all motors."""
-        await self.write_command(LinakCommands.MOVE_STOP)
+        await self.write_command(LinakCommands.MOVE_STOP, cancel_event=asyncio.Event())
 
     # Preset methods
     async def preset_flat(self) -> None:
