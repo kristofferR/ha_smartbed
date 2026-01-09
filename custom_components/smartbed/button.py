@@ -257,21 +257,11 @@ class SmartBedButton(SmartBedEntity, ButtonEntity):
                 _LOGGER.error("Failed to execute stop command: %s", err)
             return
 
-        if not await self._coordinator.async_ensure_connected():
-            _LOGGER.error(
-                "Failed to connect to bed for button %s",
-                self.entity_description.key,
-            )
-            return
-
-        controller = self._coordinator.controller
-        if controller is None:
-            _LOGGER.error("No controller available for button %s", self.entity_description.key)
-            return
-
         try:
             _LOGGER.debug("Executing button action: %s", self.entity_description.key)
-            await self.entity_description.press_fn(controller)
+            await self._coordinator.async_execute_controller_command(
+                self.entity_description.press_fn
+            )
             _LOGGER.debug("Button action completed: %s", self.entity_description.key)
         except Exception as err:
             _LOGGER.error(

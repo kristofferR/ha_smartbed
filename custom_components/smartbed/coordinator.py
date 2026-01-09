@@ -48,7 +48,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5.0  # Increased delay between retries for BLE stability
 CONNECTION_TIMEOUT = 30.0  # Timeout for BLE connection attempts
 DISCONNECT_TIMEOUT = 60.0
-DISCONNECT_TIMEOUT_NO_SENSING = 5.0  # Faster disconnect when angle sensing disabled
+DISCONNECT_TIMEOUT_NO_SENSING = 45.0  # Disconnect when angle sensing disabled (must be > preset time of ~30s)
 POST_CONNECT_DELAY = 1.0  # Delay after connection to let it stabilize
 
 # BLE connection parameters - use conservative/compatible values
@@ -81,6 +81,7 @@ class SmartBedCoordinator:
         self._lock = asyncio.Lock()
         self._command_lock = asyncio.Lock()  # Separate lock for command serialization
         self._connecting: bool = False  # Track if we're actively connecting
+        self._intentional_disconnect: bool = False  # Track intentional disconnects to skip auto-reconnect
         self._cancel_command = asyncio.Event()  # Signal to cancel current command
 
         # Position data from notifications
@@ -351,7 +352,7 @@ class SmartBedCoordinator:
                             _LOGGER.debug("No BLE devices currently visible")
                     except Exception as err:
                         _LOGGER.debug("Could not enumerate visible devices: %s", err)
-                    await asyncio.sleep(RETRY_DELAY)
+                    # Don't sleep here - the retry backoff at loop start handles delays
                     continue
 
                 # Log detailed device info including which adapter discovered it
@@ -446,12 +447,13 @@ class SmartBedCoordinator:
                 # during bleak's internal retry process
                 self._connecting = True
                 try:
+                    # Use max_attempts=1 here since outer loop handles retries
                     self._client = await establish_connection(
                         BleakClient,
                         device,
                         self._name,
                         disconnected_callback=self._on_disconnect,
-                        max_attempts=MAX_RETRIES,
+                        max_attempts=1,
                         timeout=CONNECTION_TIMEOUT,
                         ble_device_callback=ble_device_callback,
                     )
@@ -539,6 +541,10 @@ class SmartBedCoordinator:
                 _LOGGER.debug("Controller created successfully")
 
                 self._reset_disconnect_timer()
+
+                # Start position notifications (no-op if angle sensing disabled)
+                await self.async_start_notify()
+
                 return True
 
             except BleakError as err:
@@ -611,7 +617,7 @@ class SmartBedCoordinator:
         return False
 
     def _on_disconnect(self, client: BleakClient) -> None:
-        """Handle unexpected disconnection."""
+        """Handle disconnection callback."""
         # If we're in the middle of connecting, this is likely bleak's internal retry
         # for le-connection-abort-by-local - don't log warnings or clear references
         if self._connecting:
@@ -619,6 +625,18 @@ class SmartBedCoordinator:
                 "Disconnect callback during connection establishment for %s (bleak internal retry)",
                 self._address,
             )
+            return
+
+        # If this was an intentional disconnect (manual or idle timeout), don't auto-reconnect
+        if self._intentional_disconnect:
+            _LOGGER.debug(
+                "Intentional disconnect from %s - skipping auto-reconnect",
+                self._address,
+            )
+            self._client = None
+            self._controller = None
+            self._position_data = {}
+            self._intentional_disconnect = False  # Reset flag
             return
 
         _LOGGER.warning(
@@ -664,9 +682,7 @@ class SmartBedCoordinator:
             connected = await self.async_connect()
             if connected:
                 _LOGGER.info("Auto-reconnection successful for %s", self._address)
-                # Restart position notifications if enabled
-                if not self._disable_angle_sensing:
-                    await self.async_start_notify()
+                # Note: async_start_notify is called automatically in _async_connect_locked
             else:
                 _LOGGER.warning(
                     "Auto-reconnection failed for %s. Will retry on next command.",
@@ -686,6 +702,8 @@ class SmartBedCoordinator:
             self._cancel_disconnect_timer()
             if self._client is not None:
                 _LOGGER.info("Disconnecting from bed at %s", self._address)
+                # Mark as intentional so _on_disconnect doesn't trigger auto-reconnect
+                self._intentional_disconnect = True
                 try:
                     await self._client.disconnect()
                     _LOGGER.debug("Successfully disconnected from %s", self._address)
@@ -694,6 +712,7 @@ class SmartBedCoordinator:
                 finally:
                     self._client = None
                     self._controller = None
+                    self._intentional_disconnect = False
 
     def _reset_disconnect_timer(self) -> None:
         """Reset the disconnect timer."""
@@ -801,6 +820,41 @@ class SmartBedCoordinator:
         await self._controller.write_command(bytes([0x00, 0x00]))
         self._reset_disconnect_timer()
         _LOGGER.info("Stop command sent")
+
+    async def async_execute_controller_command(
+        self,
+        command_fn,
+    ) -> None:
+        """Execute a controller command with proper serialization.
+
+        This ensures commands are serialized through the command lock,
+        cancels any running command, and properly resets the disconnect timer.
+
+        Args:
+            command_fn: An async callable that takes the controller as argument.
+        """
+        # Cancel any running command immediately
+        self._cancel_command.set()
+
+        async with self._command_lock:
+            # Clear cancel signal for this command
+            self._cancel_command.clear()
+
+            if not await self.async_ensure_connected():
+                _LOGGER.error("Cannot execute command: not connected to bed")
+                raise ConnectionError("Not connected to bed")
+
+            if self._controller is None:
+                _LOGGER.error("Cannot execute command: no controller available")
+                raise RuntimeError("No controller available")
+
+            await command_fn(self._controller)
+
+            # Read position after movement if angle sensing is enabled
+            if not self._disable_angle_sensing and not self._cancel_command.is_set():
+                await self._async_read_positions()
+
+            self._reset_disconnect_timer()
 
     async def async_start_notify(self) -> None:
         """Start listening for position notifications."""

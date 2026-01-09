@@ -155,7 +155,7 @@ class SmartBedCover(SmartBedEntity, CoverEntity):
         # Max angles vary by motor type, but we'll normalize
         max_angles = {
             "back": 68,
-            "leg": 45,
+            "legs": 45,
             "head": 68,
             "feet": 45,
         }
@@ -183,18 +183,6 @@ class SmartBedCover(SmartBedEntity, CoverEntity):
             self._coordinator.name,
         )
 
-        if not await self._coordinator.async_ensure_connected():
-            _LOGGER.error(
-                "Failed to connect to bed for cover %s",
-                self.entity_description.key,
-            )
-            return
-
-        controller = self._coordinator.controller
-        if controller is None:
-            _LOGGER.error("No controller available for cover %s", self.entity_description.key)
-            return
-
         # Stop any existing movement
         if self._move_task and not self._move_task.done():
             _LOGGER.debug("Cancelling previous movement task")
@@ -214,9 +202,13 @@ class SmartBedCover(SmartBedEntity, CoverEntity):
                 self.entity_description.key,
             )
             if direction == "open":
-                await self.entity_description.open_fn(controller)
+                await self._coordinator.async_execute_controller_command(
+                    self.entity_description.open_fn
+                )
             else:
-                await self.entity_description.close_fn(controller)
+                await self._coordinator.async_execute_controller_command(
+                    self.entity_description.close_fn
+                )
             _LOGGER.debug(
                 "Movement command sent for %s %s",
                 self.entity_description.key,
@@ -244,18 +236,9 @@ class SmartBedCover(SmartBedEntity, CoverEntity):
             _LOGGER.debug("Cancelling movement task")
             self._move_task.cancel()
 
-        if not await self._coordinator.async_ensure_connected():
-            _LOGGER.warning("Cannot stop cover: not connected to bed")
-            return
-
-        controller = self._coordinator.controller
-        if controller is None:
-            _LOGGER.warning("Cannot stop cover: no controller available")
-            return
-
         try:
             _LOGGER.debug("Sending stop command for %s", self.entity_description.key)
-            await self.entity_description.stop_fn(controller)
+            await self._coordinator.async_stop_command()
             _LOGGER.debug("Stop command sent for %s", self.entity_description.key)
         except Exception as err:
             _LOGGER.error(

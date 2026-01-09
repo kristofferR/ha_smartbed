@@ -73,10 +73,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("Setting up platforms: %s", PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Start listening for position updates
-    _LOGGER.debug("Starting position notifications...")
-    await coordinator.async_start_notify()
-
     # Register services if not already registered
     await _async_register_services(hass)
 
@@ -110,9 +106,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         for device_id in device_ids:
             coordinator = await _get_coordinator_from_device(hass, device_id)
-            if coordinator and coordinator.controller:
-                await coordinator.async_ensure_connected()
-                await coordinator.controller.preset_memory(preset)
+            if coordinator:
+                await coordinator.async_execute_controller_command(
+                    lambda ctrl: ctrl.preset_memory(preset)
+                )
 
     async def handle_save_preset(call: ServiceCall) -> None:
         """Handle save_preset service call."""
@@ -121,9 +118,10 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         for device_id in device_ids:
             coordinator = await _get_coordinator_from_device(hass, device_id)
-            if coordinator and coordinator.controller:
-                await coordinator.async_ensure_connected()
-                await coordinator.controller.program_memory(preset)
+            if coordinator:
+                await coordinator.async_execute_controller_command(
+                    lambda ctrl: ctrl.program_memory(preset)
+                )
 
     async def handle_stop_all(call: ServiceCall) -> None:
         """Handle stop_all service call."""
@@ -131,9 +129,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         for device_id in device_ids:
             coordinator = await _get_coordinator_from_device(hass, device_id)
-            if coordinator and coordinator.controller:
-                await coordinator.async_ensure_connected()
-                await coordinator.controller.stop_all()
+            if coordinator:
+                await coordinator.async_stop_command()
 
     hass.services.async_register(
         DOMAIN,

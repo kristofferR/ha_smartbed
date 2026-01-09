@@ -117,7 +117,8 @@ class LinakController(BedController):
             command: The command bytes to send
             repeat_count: Number of times to repeat the command
             repeat_delay_ms: Delay between repeats in milliseconds
-            cancel_event: Optional event that signals cancellation (e.g., stop pressed)
+            cancel_event: Optional event that signals cancellation (e.g., stop pressed).
+                          If not provided, uses the coordinator's cancel event.
         """
         if self.client is None or not self.client.is_connected:
             _LOGGER.error(
@@ -126,6 +127,9 @@ class LinakController(BedController):
                 getattr(self.client, 'is_connected', 'N/A') if self.client else 'N/A',
             )
             raise ConnectionError("Not connected to bed")
+
+        # Use coordinator's cancel event if none provided
+        effective_cancel = cancel_event or self._coordinator._cancel_command
 
         _LOGGER.debug(
             "Writing command to Linak bed: %s (repeat: %d, delay: %dms) via characteristic %s",
@@ -137,15 +141,15 @@ class LinakController(BedController):
 
         for i in range(repeat_count):
             # Check for cancellation before each write
-            if cancel_event is not None and cancel_event.is_set():
+            if effective_cancel is not None and effective_cancel.is_set():
                 _LOGGER.info("Command cancelled after %d/%d writes", i, repeat_count)
                 return
 
             try:
-                # Use response=False for faster writes (write-without-response)
-                # This allows smoother continuous movement
+                # Use response=True for reliable BLE writes (write-with-response)
+                # This ensures commands are acknowledged by the device
                 await self.client.write_gatt_char(
-                    LINAK_CONTROL_CHAR_UUID, command, response=False
+                    LINAK_CONTROL_CHAR_UUID, command, response=True
                 )
             except BleakError as err:
                 _LOGGER.error(
@@ -418,9 +422,9 @@ class LinakController(BedController):
 
     # Preset methods
     async def preset_flat(self) -> None:
-        """Go to flat position (uses memory 1 typically)."""
-        # Send stop first, then all-down to go flat
-        await self.write_command(LinakCommands.MOVE_STOP)
+        """Go to flat position (uses memory 1 which is typically flat)."""
+        # Memory preset 1 is typically configured as flat position on Linak beds
+        await self.preset_memory(1)
 
     async def preset_memory(self, memory_num: int) -> None:
         """Go to memory preset."""

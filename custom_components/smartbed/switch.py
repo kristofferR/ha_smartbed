@@ -80,21 +80,11 @@ class SmartBedSwitch(SmartBedEntity, SwitchEntity):
             self._coordinator.name,
         )
 
-        if not await self._coordinator.async_ensure_connected():
-            _LOGGER.error(
-                "Failed to connect to bed for switch %s",
-                self.entity_description.key,
-            )
-            return
-
-        controller = self._coordinator.controller
-        if controller is None:
-            _LOGGER.error("No controller available for switch %s", self.entity_description.key)
-            return
-
         try:
             _LOGGER.debug("Sending turn on command for %s", self.entity_description.key)
-            await self.entity_description.turn_on_fn(controller)
+            await self._coordinator.async_execute_controller_command(
+                self.entity_description.turn_on_fn
+            )
             self._attr_is_on = True
             self.async_write_ha_state()
             _LOGGER.debug("Switch %s turned on successfully", self.entity_description.key)
@@ -118,21 +108,11 @@ class SmartBedSwitch(SmartBedEntity, SwitchEntity):
             self._coordinator.name,
         )
 
-        if not await self._coordinator.async_ensure_connected():
-            _LOGGER.error(
-                "Failed to connect to bed for switch %s",
-                self.entity_description.key,
-            )
-            return
-
-        controller = self._coordinator.controller
-        if controller is None:
-            _LOGGER.error("No controller available for switch %s", self.entity_description.key)
-            return
-
         try:
             _LOGGER.debug("Sending turn off command for %s", self.entity_description.key)
-            await self.entity_description.turn_off_fn(controller)
+            await self._coordinator.async_execute_controller_command(
+                self.entity_description.turn_off_fn
+            )
             self._attr_is_on = False
             self.async_write_ha_state()
             _LOGGER.debug("Switch %s turned off successfully", self.entity_description.key)
