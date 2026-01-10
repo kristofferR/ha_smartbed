@@ -27,6 +27,7 @@ except ImportError:
 from .const import (
     ADAPTER_AUTO,
     BED_MOTOR_PULSE_DEFAULTS,
+    BED_TYPE_ERGOMOTION,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
@@ -794,6 +795,11 @@ class SmartBedCoordinator:
             from .beds.okimat import OkimatController
 
             return OkimatController(self)
+
+        if self._bed_type == BED_TYPE_ERGOMOTION:
+            from .beds.ergomotion import ErgomotionController
+
+            return ErgomotionController(self)
 
         raise ValueError(f"Unknown bed type: {self._bed_type}")
 

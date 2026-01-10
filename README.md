@@ -29,6 +29,7 @@ These guides contain much more detail than this README - **if you're stuck, they
 | **[Linak](docs/SUPPORTED_BEDS.md#linak)** | ✅ Tested |
 | **[Keeson](docs/SUPPORTED_BEDS.md#keeson)** | ✅ Tested |
 | **[Richmat](docs/SUPPORTED_BEDS.md#richmat)** | ⚠️ Tested, not fluid yet |
+| **[Ergomotion](docs/SUPPORTED_BEDS.md#ergomotion)** | ⚠️ Untested |
 | **[Solace](docs/SUPPORTED_BEDS.md#solace)** | ⚠️ Untested |
 | **[MotoSleep](docs/SUPPORTED_BEDS.md#motosleep)** | ⚠️ Untested |
 | **[Leggett & Platt](docs/SUPPORTED_BEDS.md#leggett--platt)** | ⚠️ Untested |
@@ -47,15 +48,15 @@ These guides contain much more detail than this README - **if you're stuck, they
 
 ### Brand-Specific Features
 
-| Feature | Linak | Richmat | Keeson | Solace | MotoSleep | Leggett | Reverie | Okimat |
-|---------|-------|---------|--------|--------|-----------|---------|---------|--------|
-| Memory Presets | 4 | 2 | 4 | 5 | 2 | 4 | 4 | 4 |
-| Program Memory | ✅ | ✅ | - | ✅ | ✅ | ✅* | ✅ | - |
-| Under-bed Lights | ✅ | ✅ | ✅ | - | ✅ | RGB* | ✅ | ✅ |
-| Massage Control | ✅ | ✅ | ✅ | - | ✅ | ✅* | ✅ | ✅ |
-| Position Feedback | ✅ | - | - | - | - | - | - | - |
-| Zero-G Preset | - | ✅ | ✅ | ✅ | ✅ | - | ✅ | ✅ |
-| Anti-Snore | - | ✅ | - | ✅ | ✅ | ✅* | ✅ | - |
+| Feature | Linak | Richmat | Keeson | Ergomotion | Solace | MotoSleep | Leggett | Reverie | Okimat |
+|---------|-------|---------|--------|------------|--------|-----------|---------|---------|--------|
+| Memory Presets | 4 | 2 | 4 | 4 | 5 | 2 | 4 | 4 | 4 |
+| Program Memory | ✅ | ✅ | - | - | ✅ | ✅ | ✅* | ✅ | - |
+| Under-bed Lights | ✅ | ✅ | ✅ | ✅ | - | ✅ | RGB* | ✅ | ✅ |
+| Massage Control | ✅ | ✅ | ✅ | ✅ | - | ✅ | ✅* | ✅ | ✅ |
+| Position Feedback | ✅ | - | - | ✅ | - | - | - | - | - |
+| Zero-G Preset | - | ✅ | ✅ | ✅ | ✅ | ✅ | - | ✅ | ✅ |
+| Anti-Snore | - | ✅ | - | - | ✅ | ✅ | ✅* | ✅ | - |
 
 *Gen2 variant only
 

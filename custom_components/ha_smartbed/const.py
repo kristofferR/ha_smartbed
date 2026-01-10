@@ -26,6 +26,7 @@ BED_TYPE_REVERIE: Final = "reverie"
 BED_TYPE_LEGGETT_PLATT: Final = "leggett_platt"
 BED_TYPE_OKIMAT: Final = "okimat"
 BED_TYPE_KEESON: Final = "keeson"
+BED_TYPE_ERGOMOTION: Final = "ergomotion"
 BED_TYPE_OCTO: Final = "octo"
 
 SUPPORTED_BED_TYPES: Final = [
@@ -37,6 +38,7 @@ SUPPORTED_BED_TYPES: Final = [
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_OKIMAT,
     BED_TYPE_KEESON,
+    BED_TYPE_ERGOMOTION,
     # BED_TYPE_OCTO,  # TODO: implement - cloud-based (Tempur Ergo, BeautyRest, Serta)
 ]
 
@@ -100,6 +102,16 @@ KEESON_FALLBACK_GATT_PAIRS: Final = [
     ("0000ffb0-0000-1000-8000-00805f9b34fb", "0000ffb2-0000-1000-8000-00805f9b34fb"),
 ]
 
+# Ergomotion specific UUIDs (same protocol as Keeson Base, but with position feedback)
+ERGOMOTION_SERVICE_UUID: Final = "0000ffe5-0000-1000-8000-00805f9b34fb"
+ERGOMOTION_WRITE_CHAR_UUID: Final = "0000ffe9-0000-1000-8000-00805f9b34fb"
+ERGOMOTION_NOTIFY_CHAR_UUID: Final = "0000ffe4-0000-1000-8000-00805f9b34fb"
+
+# Ergomotion position calibration (based on AlexxIT/Ergomotion implementation)
+# Position values are 16-bit little-endian, 0xFFFF means inactive
+ERGOMOTION_MAX_POSITION: Final = 100  # Position values normalized to 0-100
+ERGOMOTION_MAX_MASSAGE: Final = 6  # Massage levels 0-6
+
 # Solace specific UUIDs
 SOLACE_SERVICE_UUID: Final = "0000ffe0-0000-1000-8000-00805f9b34fb"
 SOLACE_CHAR_UUID: Final = "0000ffe1-0000-1000-8000-00805f9b34fb"
@@ -135,7 +147,7 @@ KEESON_VARIANT_BASE: Final = "base"
 KEESON_VARIANT_KSBT: Final = "ksbt"
 KEESON_VARIANTS: Final = {
     VARIANT_AUTO: "Auto-detect",
-    KEESON_VARIANT_BASE: "BaseI4/BaseI5 (Member's Mark, Purple, ErgoMotion)",
+    KEESON_VARIANT_BASE: "BaseI4/BaseI5 (Member's Mark, Purple)",
     KEESON_VARIANT_KSBT: "KSBT (older Keeson remotes)",
 }
 

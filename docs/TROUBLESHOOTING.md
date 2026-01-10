@@ -275,7 +275,7 @@ Use these to identify your bed type in a BLE scanner:
 |------|----------|
 | `99fa0001-338a-1024-8a49-009c0215f78a` | Linak |
 | `6e400001-b5a3-f393-e0a9-e50e24dcca9e` | Richmat Nordic / Keeson KSBT |
-| `0000ffe5-0000-1000-8000-00805f9b34fb` | Keeson Base (primary) |
+| `0000ffe5-0000-1000-8000-00805f9b34fb` | Keeson Base / Ergomotion |
 | `0000fff0-0000-1000-8000-00805f9b34fb` | Keeson Base (fallback 1) |
 | `0000ffb0-0000-1000-8000-00805f9b34fb` | Keeson Base (fallback 2) |
 | `0000ffe0-0000-1000-8000-00805f9b34fb` | Solace / MotoSleep |

@@ -24,6 +24,7 @@ from homeassistant.const import CONF_ADDRESS, CONF_NAME
 from .const import (
     ADAPTER_AUTO,
     ALL_PROTOCOL_VARIANTS,
+    BED_TYPE_ERGOMOTION,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
@@ -216,6 +217,15 @@ def detect_bed_type(service_info: BluetoothServiceInfoBleak) -> str | None:
             service_info.name,
         )
         return BED_TYPE_MOTOSLEEP
+
+    # Check for Ergomotion - name-based detection (before Keeson since same UUID)
+    if "ergomotion" in device_name or "ergo" in device_name:
+        _LOGGER.info(
+            "Detected Ergomotion bed at %s (name: %s)",
+            service_info.address,
+            service_info.name,
+        )
+        return BED_TYPE_ERGOMOTION
 
     # Check for Keeson BaseI4/I5 (must check before generic UUIDs)
     if KEESON_BASE_SERVICE_UUID.lower() in service_uuids:

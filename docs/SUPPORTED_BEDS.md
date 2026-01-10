@@ -7,6 +7,7 @@ This document provides detailed information about each supported bed brand, incl
 - [Linak](#linak)
 - [Richmat](#richmat)
 - [Keeson](#keeson)
+- [Ergomotion](#ergomotion)
 - [Solace](#solace)
 - [MotoSleep](#motosleep)
 - [Leggett & Platt](#leggett--platt)
@@ -227,6 +228,65 @@ Position data available via notify characteristics:
 | Massage Foot Down | `0x01000000` | Decrease foot massage |
 | Flat | `0x08000000` | Flat preset |
 | Massage Wave | `0x10000000` | Cycle wave massage |
+
+---
+
+## Ergomotion
+
+**Status:** ⚠️ Untested
+
+### Known Models
+- Ergomotion adjustable bases
+- Some OEM beds using Ergomotion controllers
+
+### Features
+| Feature | Supported |
+|---------|-----------|
+| Motor Control | ✅ |
+| Position Feedback | ✅ |
+| Memory Presets | ✅ (4 slots) |
+| Massage | ✅ (0-6 levels) |
+| Under-bed Lights | ✅ |
+| Zero-G / Lounge / TV | ✅ |
+
+### Protocol Details
+
+Ergomotion uses the same protocol as Keeson BaseI4/BaseI5, but with additional position feedback via BLE notifications.
+
+**Service UUID:** `0000ffe5-0000-1000-8000-00805f9b34fb`
+**Write Characteristic:** `0000ffe9-0000-1000-8000-00805f9b34fb`
+**Notify Characteristic:** `0000ffe4-0000-1000-8000-00805f9b34fb`
+**Format:** 8 bytes `[0xE5, 0xFE, 0x16, b0, b1, b2, b3, checksum]`
+**Checksum:** `(~sum(bytes)) & 0xFF`
+
+Uses the same 32-bit command values as Keeson - see [Keeson commands](#commands-32-bit-values).
+
+#### Position Feedback
+
+Ergomotion beds provide real-time position updates via BLE notifications:
+
+| Header | Length | Description |
+|--------|--------|-------------|
+| `0xED` | 16 bytes | Basic position data |
+| `0xF0` | 19 bytes | Extended position data |
+| `0xF1` | 20 bytes | Full status data |
+
+Position data includes:
+- Head position (16-bit, 0-100 scale)
+- Foot position (16-bit, 0-100 scale)
+- Movement status flags
+- Massage levels (0-6)
+- LED status
+- Timer status
+
+#### Scene Presets
+
+| Scene | Command Value |
+|-------|---------------|
+| Flat | `0x08000000` |
+| Zero-G | `0x00001000` |
+| Lounge | `0x00002000` |
+| TV | `0x00004000` |
 
 ---
 
@@ -570,5 +630,6 @@ For fine-tuning motor movement behavior, you can adjust these settings in the in
    - `HHC*` → MotoSleep
    - `DPG*` or `Desk*` → Linak
    - `Okin*` → Okimat
+   - `Ergomotion*` or `Ergo*` → Ergomotion
 
 If your bed isn't auto-detected, use manual configuration and try different bed types.
