@@ -17,13 +17,18 @@ from custom_components.adjustable_bed.config_flow import (
     is_valid_mac_address,
 )
 from custom_components.adjustable_bed.const import (
+    BED_TYPE_DEWERTOKIN,
+    BED_TYPE_ERGOMOTION,
+    BED_TYPE_JIECANG,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
     BED_TYPE_MOTOSLEEP,
+    BED_TYPE_OCTO,
     BED_TYPE_OKIMAT,
     BED_TYPE_REVERIE,
     BED_TYPE_RICHMAT,
+    BED_TYPE_SERTA,
     BED_TYPE_SOLACE,
     CONF_BED_TYPE,
     CONF_DISABLE_ANGLE_SENSING,
@@ -144,6 +149,97 @@ class TestDetectBedType:
 
         bed_type = detect_bed_type(service_info)
         assert bed_type is None
+
+    def test_detect_ergomotion_bed(self, mock_bluetooth_service_info_ergomotion):
+        """Test detection of Ergomotion bed by name."""
+        bed_type = detect_bed_type(mock_bluetooth_service_info_ergomotion)
+        assert bed_type == BED_TYPE_ERGOMOTION
+
+    def test_detect_ergomotion_ergo_name(self):
+        """Test Ergomotion detection with 'ergo' in name."""
+        service_info = MagicMock()
+        service_info.name = "Ergo Adjust Pro"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_ERGOMOTION
+
+    def test_detect_jiecang_bed(self, mock_bluetooth_service_info_jiecang):
+        """Test detection of Jiecang bed by name (JC- prefix)."""
+        bed_type = detect_bed_type(mock_bluetooth_service_info_jiecang)
+        assert bed_type == BED_TYPE_JIECANG
+
+    def test_detect_jiecang_glide_name(self):
+        """Test Jiecang detection with 'glide' in name."""
+        service_info = MagicMock()
+        service_info.name = "Glide Smart Base"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_JIECANG
+
+    def test_detect_jiecang_dream_motion_name(self):
+        """Test Jiecang detection with 'dream motion' in name."""
+        service_info = MagicMock()
+        service_info.name = "Dream Motion Base"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_JIECANG
+
+    def test_detect_dewertokin_bed(self, mock_bluetooth_service_info_dewertokin):
+        """Test detection of DewertOkin bed by name (A H Beard)."""
+        bed_type = detect_bed_type(mock_bluetooth_service_info_dewertokin)
+        assert bed_type == BED_TYPE_DEWERTOKIN
+
+    def test_detect_dewertokin_dewert_name(self):
+        """Test DewertOkin detection with 'dewert' in name."""
+        service_info = MagicMock()
+        service_info.name = "Dewert Base"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_DEWERTOKIN
+
+    def test_detect_dewertokin_hankook_name(self):
+        """Test DewertOkin detection with 'hankook' in name."""
+        service_info = MagicMock()
+        service_info.name = "HankookGallery Bed"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_DEWERTOKIN
+
+    def test_detect_serta_bed(self, mock_bluetooth_service_info_serta):
+        """Test detection of Serta bed by name."""
+        bed_type = detect_bed_type(mock_bluetooth_service_info_serta)
+        assert bed_type == BED_TYPE_SERTA
+
+    def test_detect_serta_motion_perfect_name(self):
+        """Test Serta detection with 'motion perfect' in name."""
+        service_info = MagicMock()
+        service_info.name = "Motion Perfect III"
+        service_info.address = "AA:BB:CC:DD:EE:FF"
+        service_info.service_uuids = []
+        service_info.manufacturer_data = {}
+
+        bed_type = detect_bed_type(service_info)
+        assert bed_type == BED_TYPE_SERTA
+
+    def test_detect_octo_bed(self, mock_bluetooth_service_info_octo):
+        """Test detection of Octo bed by name (prioritized over Solace UUID)."""
+        bed_type = detect_bed_type(mock_bluetooth_service_info_octo)
+        assert bed_type == BED_TYPE_OCTO
 
 
 class TestBluetoothDiscoveryFlow:

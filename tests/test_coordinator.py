@@ -8,7 +8,19 @@ import pytest
 from bleak.exc import BleakError
 from homeassistant.core import HomeAssistant
 
-from custom_components.adjustable_bed.const import BED_TYPE_LINAK
+from custom_components.adjustable_bed.const import (
+    BED_MOTOR_PULSE_DEFAULTS,
+    BED_TYPE_KEESON,
+    BED_TYPE_LINAK,
+    BED_TYPE_RICHMAT,
+    CONF_BED_TYPE,
+    CONF_MOTOR_COUNT,
+    CONF_MOTOR_PULSE_COUNT,
+    CONF_MOTOR_PULSE_DELAY_MS,
+    DEFAULT_MOTOR_PULSE_COUNT,
+    DEFAULT_MOTOR_PULSE_DELAY_MS,
+    DOMAIN,
+)
 from custom_components.adjustable_bed.coordinator import AdjustableBedCoordinator
 
 from .conftest import TEST_ADDRESS, TEST_NAME
@@ -316,3 +328,170 @@ class TestCoordinatorNotifications:
 
         # start_notify should be called for position characteristics
         assert mock_bleak_client.start_notify.call_count >= 1
+
+
+class TestMotorPulseConfiguration:
+    """Test motor pulse configuration."""
+
+    async def test_default_motor_pulse_values(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry,
+    ):
+        """Test default motor pulse values are used when not configured."""
+        coordinator = AdjustableBedCoordinator(hass, mock_config_entry)
+
+        assert coordinator.motor_pulse_count == DEFAULT_MOTOR_PULSE_COUNT
+        assert coordinator.motor_pulse_delay_ms == DEFAULT_MOTOR_PULSE_DELAY_MS
+
+    async def test_custom_motor_pulse_values(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ):
+        """Test custom motor pulse values from config."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        mock_config_entry_data[CONF_MOTOR_PULSE_COUNT] = 50
+        mock_config_entry_data[CONF_MOTOR_PULSE_DELAY_MS] = 100
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=TEST_NAME,
+            data=mock_config_entry_data,
+            unique_id="AA:BB:CC:DD:EE:FF",
+            entry_id="test_entry_custom_pulse",
+        )
+
+        coordinator = AdjustableBedCoordinator(hass, entry)
+
+        assert coordinator.motor_pulse_count == 50
+        assert coordinator.motor_pulse_delay_ms == 100
+
+    async def test_richmat_bed_type_default_pulses(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ):
+        """Test Richmat bed uses its specific default pulse values."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        mock_config_entry_data[CONF_BED_TYPE] = BED_TYPE_RICHMAT
+        # Don't set pulse values - should use bed-type defaults
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=TEST_NAME,
+            data=mock_config_entry_data,
+            unique_id="AA:BB:CC:DD:EE:FF",
+            entry_id="test_entry_richmat_pulse",
+        )
+
+        coordinator = AdjustableBedCoordinator(hass, entry)
+
+        expected_count, expected_delay = BED_MOTOR_PULSE_DEFAULTS[BED_TYPE_RICHMAT]
+        assert coordinator.motor_pulse_count == expected_count  # 30
+        assert coordinator.motor_pulse_delay_ms == expected_delay  # 50
+
+    async def test_keeson_bed_type_default_pulses(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ):
+        """Test Keeson bed uses its specific default pulse values."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        mock_config_entry_data[CONF_BED_TYPE] = BED_TYPE_KEESON
+        # Don't set pulse values - should use bed-type defaults
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=TEST_NAME,
+            data=mock_config_entry_data,
+            unique_id="AA:BB:CC:DD:EE:FF",
+            entry_id="test_entry_keeson_pulse",
+        )
+
+        coordinator = AdjustableBedCoordinator(hass, entry)
+
+        expected_count, expected_delay = BED_MOTOR_PULSE_DEFAULTS[BED_TYPE_KEESON]
+        assert coordinator.motor_pulse_count == expected_count  # 25
+        assert coordinator.motor_pulse_delay_ms == expected_delay  # 200
+
+    async def test_custom_pulse_overrides_bed_default(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ):
+        """Test custom pulse config overrides bed-type defaults."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        mock_config_entry_data[CONF_BED_TYPE] = BED_TYPE_RICHMAT
+        mock_config_entry_data[CONF_MOTOR_PULSE_COUNT] = 15
+        mock_config_entry_data[CONF_MOTOR_PULSE_DELAY_MS] = 75
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=TEST_NAME,
+            data=mock_config_entry_data,
+            unique_id="AA:BB:CC:DD:EE:FF",
+            entry_id="test_entry_custom_override",
+        )
+
+        coordinator = AdjustableBedCoordinator(hass, entry)
+
+        # Custom values should override bed-type defaults
+        assert coordinator.motor_pulse_count == 15
+        assert coordinator.motor_pulse_delay_ms == 75
+
+
+class TestMultiMotorConfiguration:
+    """Test multi-motor configuration."""
+
+    @pytest.mark.parametrize("motor_count", [2, 3, 4])
+    async def test_motor_count_configurations(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+        motor_count: int,
+    ):
+        """Test different motor count configurations."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        mock_config_entry_data[CONF_MOTOR_COUNT] = motor_count
+
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            title=TEST_NAME,
+            data=mock_config_entry_data,
+            unique_id="AA:BB:CC:DD:EE:FF",
+            entry_id=f"test_entry_{motor_count}_motors",
+        )
+
+        coordinator = AdjustableBedCoordinator(hass, entry)
+
+        assert coordinator.motor_count == motor_count
+
+    async def test_device_info_reflects_motor_count(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_data: dict,
+    ):
+        """Test device info model includes motor count."""
+        from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+        for motor_count in [2, 3, 4]:
+            mock_config_entry_data[CONF_MOTOR_COUNT] = motor_count
+
+            entry = MockConfigEntry(
+                domain=DOMAIN,
+                title=TEST_NAME,
+                data=mock_config_entry_data,
+                unique_id=f"AA:BB:CC:DD:EE:{motor_count:02X}",
+                entry_id=f"test_entry_model_{motor_count}",
+            )
+
+            coordinator = AdjustableBedCoordinator(hass, entry)
+            device_info = coordinator.device_info
+
+            assert f"{motor_count} motors" in device_info["model"]

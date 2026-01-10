@@ -14,13 +14,18 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 pytest_plugins = "pytest_homeassistant_custom_component"
 
 from custom_components.adjustable_bed.const import (
+    BED_TYPE_DEWERTOKIN,
+    BED_TYPE_ERGOMOTION,
+    BED_TYPE_JIECANG,
     BED_TYPE_KEESON,
     BED_TYPE_LEGGETT_PLATT,
     BED_TYPE_LINAK,
     BED_TYPE_MOTOSLEEP,
+    BED_TYPE_OCTO,
     BED_TYPE_OKIMAT,
     BED_TYPE_REVERIE,
     BED_TYPE_RICHMAT,
+    BED_TYPE_SERTA,
     BED_TYPE_SOLACE,
     CONF_BED_TYPE,
     CONF_DISABLE_ANGLE_SENSING,
@@ -324,28 +329,19 @@ def mock_bluetooth_adapters() -> Generator[None, None, None]:
             "custom_components.adjustable_bed.coordinator.bluetooth.async_last_service_info",
             return_value=None,
         ),
+        patch(
+            "custom_components.adjustable_bed.coordinator.bluetooth.async_register_connection_params",
+            create=True,  # Allow patching even if attribute doesn't exist
+        ),
     ]
 
-    # Try to patch async_register_connection_params if it exists
+    for p in patches:
+        p.start()
     try:
-        from homeassistant.components import bluetooth
-        if hasattr(bluetooth, 'async_register_connection_params'):
-            patches.append(
-                patch(
-                    "custom_components.adjustable_bed.coordinator.bluetooth.async_register_connection_params",
-                )
-            )
-    except ImportError:
-        pass
-
-    with patch.multiple("custom_components.adjustable_bed.coordinator", HAS_CONNECT_PARAMS=False):
+        yield
+    finally:
         for p in patches:
-            p.start()
-        try:
-            yield
-        finally:
-            for p in patches:
-                p.stop()
+            p.stop()
 
 
 @pytest.fixture
@@ -356,3 +352,98 @@ def mock_coordinator_connected(
 ) -> Generator[None, None, None]:
     """Provide all mocks needed for a connected coordinator."""
     yield
+
+
+@pytest.fixture
+def mock_bluetooth_service_info_ergomotion() -> MagicMock:
+    """Return mock Bluetooth service info for an Ergomotion bed."""
+    service_info = MagicMock()
+    service_info.name = "Ergomotion Bed"
+    service_info.address = "AA:00:11:22:33:44"
+    service_info.rssi = -60
+    service_info.manufacturer_data = {}
+    service_info.service_data = {}
+    service_info.service_uuids = []
+    service_info.source = "local"
+    service_info.device = MagicMock()
+    service_info.advertisement = MagicMock()
+    service_info.connectable = True
+    service_info.time = 0
+    service_info.tx_power = None
+    return service_info
+
+
+@pytest.fixture
+def mock_bluetooth_service_info_jiecang() -> MagicMock:
+    """Return mock Bluetooth service info for a Jiecang bed."""
+    service_info = MagicMock()
+    service_info.name = "JC-35TK1WT"  # Typical Jiecang name
+    service_info.address = "BB:00:11:22:33:44"
+    service_info.rssi = -60
+    service_info.manufacturer_data = {}
+    service_info.service_data = {}
+    service_info.service_uuids = []
+    service_info.source = "local"
+    service_info.device = MagicMock()
+    service_info.advertisement = MagicMock()
+    service_info.connectable = True
+    service_info.time = 0
+    service_info.tx_power = None
+    return service_info
+
+
+@pytest.fixture
+def mock_bluetooth_service_info_dewertokin() -> MagicMock:
+    """Return mock Bluetooth service info for a DewertOkin bed."""
+    service_info = MagicMock()
+    service_info.name = "A H Beard Bed"  # A H Beard uses DewertOkin
+    service_info.address = "CC:00:11:22:33:44"
+    service_info.rssi = -60
+    service_info.manufacturer_data = {}
+    service_info.service_data = {}
+    service_info.service_uuids = []
+    service_info.source = "local"
+    service_info.device = MagicMock()
+    service_info.advertisement = MagicMock()
+    service_info.connectable = True
+    service_info.time = 0
+    service_info.tx_power = None
+    return service_info
+
+
+@pytest.fixture
+def mock_bluetooth_service_info_serta() -> MagicMock:
+    """Return mock Bluetooth service info for a Serta bed."""
+    service_info = MagicMock()
+    service_info.name = "Serta Motion Perfect"
+    service_info.address = "DD:00:11:22:33:44"
+    service_info.rssi = -60
+    service_info.manufacturer_data = {}
+    service_info.service_data = {}
+    service_info.service_uuids = []
+    service_info.source = "local"
+    service_info.device = MagicMock()
+    service_info.advertisement = MagicMock()
+    service_info.connectable = True
+    service_info.time = 0
+    service_info.tx_power = None
+    return service_info
+
+
+@pytest.fixture
+def mock_bluetooth_service_info_octo() -> MagicMock:
+    """Return mock Bluetooth service info for an Octo bed."""
+    service_info = MagicMock()
+    service_info.name = "Octo Smart Bed"
+    service_info.address = "EE:00:11:22:33:44"
+    service_info.rssi = -60
+    service_info.manufacturer_data = {}
+    service_info.service_data = {}
+    service_info.service_uuids = [SOLACE_SERVICE_UUID]  # Shares UUID with Solace
+    service_info.source = "local"
+    service_info.device = MagicMock()
+    service_info.advertisement = MagicMock()
+    service_info.connectable = True
+    service_info.time = 0
+    service_info.tx_power = None
+    return service_info
