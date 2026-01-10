@@ -91,6 +91,8 @@ def mock_bleak_client() -> MagicMock:
     client.services = MagicMock()
     client.services.__iter__ = lambda self: iter([])
     client.services.__len__ = lambda self: 0
+    # Return None for service lookups to avoid false positives in variant detection
+    client.services.get_service = MagicMock(return_value=None)
 
     client.connect = AsyncMock(return_value=True)
     client.disconnect = AsyncMock()
