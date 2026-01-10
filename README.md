@@ -27,8 +27,8 @@ These guides contain much more detail than this README - **if you're stuck, they
 | Brand | Status |
 |-------|--------|
 | **[Linak](docs/SUPPORTED_BEDS.md#linak)** | ✅ Tested |
-| **[Richmat](docs/SUPPORTED_BEDS.md#richmat)** | ⚠️ Untested |
-| **[Keeson](docs/SUPPORTED_BEDS.md#keeson)** | ⚠️ Untested |
+| **[Keeson](docs/SUPPORTED_BEDS.md#keeson)** | ✅ Tested |
+| **[Richmat](docs/SUPPORTED_BEDS.md#richmat)** | ⚠️ Tested, not fluid yet |
 | **[Solace](docs/SUPPORTED_BEDS.md#solace)** | ⚠️ Untested |
 | **[MotoSleep](docs/SUPPORTED_BEDS.md#motosleep)** | ⚠️ Untested |
 | **[Leggett & Platt](docs/SUPPORTED_BEDS.md#leggett--platt)** | ⚠️ Untested |
